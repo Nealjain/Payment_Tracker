@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { BurgerMenu } from "@/components/burger-menu"
 import { Construction, Users, DollarSign, Split, ArrowRight } from "lucide-react"
-import PixelBlast from "@/components/ui/pixel-blast"
+import SimpleBackground from "@/components/ui/simple-background"
 import { useRouter } from "next/navigation"
 
 export default function GroupExpensesPage() {
@@ -35,27 +35,7 @@ export default function GroupExpensesPage() {
 
   return (
     <div className="min-h-screen bg-black relative">
-      <div className="fixed inset-0 w-full h-full">
-        <PixelBlast
-          variant="circle"
-          pixelSize={6}
-          color="#B19EEF"
-          patternScale={3}
-          patternDensity={1.2}
-          pixelSizeJitter={0.5}
-          enableRipples
-          rippleSpeed={0.4}
-          rippleThickness={0.12}
-          rippleIntensityScale={1.5}
-          liquid
-          liquidStrength={0.12}
-          liquidRadius={1.2}
-          liquidWobbleSpeed={5}
-          speed={0.6}
-          edgeFade={0.25}
-          transparent
-        />
-      </div>
+      <SimpleBackground />
 
       <BurgerMenu />
 

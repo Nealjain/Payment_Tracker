@@ -22,7 +22,7 @@ import {
 import { BurgerMenu } from "@/components/burger-menu"
 import { useToast } from "@/hooks/use-toast"
 import { Trash2, Shield, User, Eye, EyeOff, Mail, Phone, Key } from "lucide-react"
-import PixelBlast from "@/components/ui/pixel-blast"
+import SimpleBackground from "@/components/ui/simple-background"
 import { PhoneInput } from "react-international-phone"
 import "react-international-phone/style.css"
 
@@ -401,27 +401,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-black relative">
-      <div className="fixed inset-0 w-full h-full">
-        <PixelBlast
-          variant="circle"
-          pixelSize={6}
-          color="#B19EEF"
-          patternScale={3}
-          patternDensity={1.2}
-          pixelSizeJitter={0.5}
-          enableRipples
-          rippleSpeed={0.4}
-          rippleThickness={0.12}
-          rippleIntensityScale={1.5}
-          liquid
-          liquidStrength={0.12}
-          liquidRadius={1.2}
-          liquidWobbleSpeed={5}
-          speed={0.6}
-          edgeFade={0.25}
-          transparent
-        />
-      </div>
+      <SimpleBackground />
       <BurgerMenu />
 
       <div className="p-4 pt-20 relative z-10">

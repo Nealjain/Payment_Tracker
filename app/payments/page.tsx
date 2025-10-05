@@ -4,14 +4,14 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { PaymentForm } from "@/components/payment-form"
+import { PaymentFormEnhanced } from "@/components/payment-form-enhanced"
 import { PaymentList } from "@/components/payment-list"
 import { PaymentFiltersComponent, type PaymentFilters } from "@/components/payment-filters"
 import { BurgerMenu } from "@/components/burger-menu"
 import { useToast } from "@/hooks/use-toast"
 import { Plus, List, Filter } from "lucide-react"
 import type { Payment, PaymentFormData } from "@/lib/types"
-import PixelBlast from "@/components/ui/pixel-blast"
+import SimpleBackground from "@/components/ui/simple-background"
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([])
@@ -173,27 +173,7 @@ export default function PaymentsPage() {
 
   return (
     <div className="min-h-screen bg-black relative">
-      <div className="fixed inset-0 w-full h-full">
-        <PixelBlast
-          variant="circle"
-          pixelSize={6}
-          color="#B19EEF"
-          patternScale={3}
-          patternDensity={1.2}
-          pixelSizeJitter={0.5}
-          enableRipples
-          rippleSpeed={0.4}
-          rippleThickness={0.12}
-          rippleIntensityScale={1.5}
-          liquid
-          liquidStrength={0.12}
-          liquidRadius={1.2}
-          liquidWobbleSpeed={5}
-          speed={0.6}
-          edgeFade={0.25}
-          transparent
-        />
-      </div>
+      <SimpleBackground />
 
       <BurgerMenu />
 
@@ -241,7 +221,7 @@ export default function PaymentsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Add/Edit Payment Form */}
             <div>
-              <PaymentForm
+              <PaymentFormEnhanced
                 payment={editingPayment || undefined}
                 onSubmit={editingPayment ? handleUpdatePayment : handleAddPayment}
                 onCancel={handleCancelForm}

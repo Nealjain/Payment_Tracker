@@ -39,11 +39,11 @@ async function handleCreatePayment(request: NextRequest, userId: string) {
       return NextResponse.json({ success: false, error: "Amount must be a positive number" }, { status: 400 })
     }
 
-    if (!["cash", "online"].includes(type)) {
+    if (!["income", "expense"].includes(type)) {
       return NextResponse.json({ success: false, error: "Invalid payment type" }, { status: 400 })
     }
 
-    if (!["incoming", "outgoing"].includes(direction)) {
+    if (!["in", "out"].includes(direction)) {
       return NextResponse.json({ success: false, error: "Invalid payment direction" }, { status: 400 })
     }
 
