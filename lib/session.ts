@@ -31,7 +31,30 @@ export async function createSession(userId: string): Promise<string> {
   return sessionToken
 }
 
-export async function getSession(): Promise<SessionData | null> {
+export async function getSession(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies()
+    const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
+
+    if (!sessionToken) {
+      return null
+    }
+
+    const sessionData: SessionData = JSON.parse(Buffer.from(sessionToken, "base64").toString())
+
+    if (Date.now() > sessionData.expiresAt) {
+      await clearSession()
+      return null
+    }
+
+    return sessionData.userId
+  } catch (error) {
+    await clearSession()
+    return null
+  }
+}
+
+export async function getSessionData(): Promise<SessionData | null> {
   try {
     const cookieStore = await cookies()
     const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
