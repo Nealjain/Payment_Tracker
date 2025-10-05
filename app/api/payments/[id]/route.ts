@@ -38,8 +38,8 @@ async function handleUpdatePayment(request: NextRequest, userId: string, payment
 
     const paymentData = {
       amount,
-      type: type as "cash" | "online",
-      direction: direction as "incoming" | "outgoing",
+      type: type as "income" | "expense",
+      direction: direction as "in" | "out",
       description: description || undefined,
       category: category || undefined,
       date,

@@ -9,8 +9,8 @@ export interface Payment {
   id: string
   user_id: string
   amount: number
-  type: "cash" | "online"
-  direction: "incoming" | "outgoing"
+  type: "income" | "expense"
+  direction: "in" | "out"
   description?: string
   category?: string
   date: string
@@ -20,8 +20,8 @@ export interface Payment {
 
 export interface PaymentFormData {
   amount: number
-  type: "cash" | "online"
-  direction: "incoming" | "outgoing"
+  type: "income" | "expense"
+  direction: "in" | "out"
   description?: string
   category?: string
   date: string

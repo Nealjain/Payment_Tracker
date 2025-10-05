@@ -121,15 +121,15 @@ export async function getPaymentStats(userId: string): Promise<{
       return { success: false, error: error.message }
     }
 
-    const totalIncome = data.filter((p) => p.direction === "incoming").reduce((sum, p) => sum + Number(p.amount), 0)
+    const totalIncome = data.filter((p) => p.direction === "in").reduce((sum, p) => sum + Number(p.amount), 0)
 
-    const totalExpenses = data.filter((p) => p.direction === "outgoing").reduce((sum, p) => sum + Number(p.amount), 0)
+    const totalExpenses = data.filter((p) => p.direction === "out").reduce((sum, p) => sum + Number(p.amount), 0)
 
     const netBalance = totalIncome - totalExpenses
 
     // For outstanding dues, we'll consider negative amounts as dues owed
     const outstandingDues = data
-      .filter((p) => p.direction === "outgoing" && Number(p.amount) < 0)
+      .filter((p) => p.direction === "out" && Number(p.amount) < 0)
       .reduce((sum, p) => sum + Math.abs(Number(p.amount)), 0)
 
     return {

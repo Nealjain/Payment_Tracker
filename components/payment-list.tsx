@@ -72,12 +72,12 @@ export function PaymentList({ payments, onEdit, onDelete, isLoading = false }: P
               <div className="flex items-center gap-3 flex-1">
                 <div
                   className={`p-2 rounded-full ${
-                    payment.direction === "incoming"
+                    payment.direction === "in"
                       ? "bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400"
                       : "bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400"
                   }`}
                 >
-                  {payment.direction === "incoming" ? (
+                  {payment.direction === "in" ? (
                     <ArrowUpCircle className="h-4 w-4" />
                   ) : (
                     <ArrowDownCircle className="h-4 w-4" />
@@ -88,12 +88,12 @@ export function PaymentList({ payments, onEdit, onDelete, isLoading = false }: P
                   <div className="flex items-center gap-2 mb-1">
                     <span
                       className={`font-semibold ${
-                        payment.direction === "incoming"
+                        payment.direction === "in"
                           ? "text-green-600 dark:text-green-400"
                           : "text-red-600 dark:text-red-400"
                       }`}
                     >
-                      {payment.direction === "incoming" ? "+" : "-"}
+                      {payment.direction === "in" ? "+" : "-"}
                       {formatAmount(payment.amount)}
                     </span>
                     <Badge variant="secondary" className="text-xs">

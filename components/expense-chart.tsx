@@ -11,7 +11,7 @@ interface ExpenseChartProps {
 export function ExpenseChart({ payments }: ExpenseChartProps) {
   // Group expenses by category
   const expensesByCategory = payments
-    .filter((p) => p.direction === "outgoing")
+    .filter((p) => p.direction === "out")
     .reduce(
       (acc, payment) => {
         const category = payment.category || "Other"

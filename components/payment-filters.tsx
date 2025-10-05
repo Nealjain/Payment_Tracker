@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils"
 
 export interface PaymentFilters {
   search: string
-  type: "all" | "cash" | "online"
-  direction: "all" | "incoming" | "outgoing"
+  type: "all" | "income" | "expense"
+  direction: "all" | "in" | "out"
   category: string
   dateFrom: string
   dateTo: string

@@ -22,8 +22,8 @@ interface PaymentFormProps {
 export function PaymentForm({ payment, onSubmit, onCancel, isLoading = false }: PaymentFormProps) {
   const [formData, setFormData] = useState<PaymentFormData>({
     amount: payment?.amount || 0,
-    type: payment?.type || "cash",
-    direction: payment?.direction || "outgoing",
+    type: payment?.type || "expense",
+    direction: payment?.direction || "out",
     description: payment?.description || "",
     category: payment?.category || "",
     date: payment?.date || new Date().toISOString().split("T")[0],
@@ -71,38 +71,23 @@ export function PaymentForm({ payment, onSubmit, onCancel, isLoading = false }: 
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="direction">Type</Label>
-              <Select
-                value={formData.direction}
-                onValueChange={(value: "incoming" | "outgoing") => handleInputChange("direction", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="incoming">Income</SelectItem>
-                  <SelectItem value="outgoing">Expense</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="type">Method</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(value: "cash" | "online") => handleInputChange("type", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="online">Online</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="type">Transaction Type</Label>
+            <Select
+              value={formData.type}
+              onValueChange={(value: "income" | "expense") => {
+                handleInputChange("type", value)
+                handleInputChange("direction", value === "income" ? "in" : "out")
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="income">Income</SelectItem>
+                <SelectItem value="expense">Expense</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
