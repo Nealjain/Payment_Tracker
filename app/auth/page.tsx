@@ -344,33 +344,35 @@ export default function AuthPage() {
     !isLoading
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-black animate-fade-in relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-black relative">
       {/* Animated Background */}
-      <PixelBlast
-        variant="circle"
-        pixelSize={6}
-        color="#B19EEF"
-        patternScale={3}
-        patternDensity={1.2}
-        pixelSizeJitter={0.5}
-        enableRipples
-        rippleSpeed={0.4}
-        rippleThickness={0.12}
-        rippleIntensityScale={1.5}
-        liquid
-        liquidStrength={0.12}
-        liquidRadius={1.2}
-        liquidWobbleSpeed={5}
-        speed={0.6}
-        edgeFade={0.25}
-        transparent
-      />
+      <div className="fixed inset-0 w-full h-full">
+        <PixelBlast
+          variant="circle"
+          pixelSize={6}
+          color="#B19EEF"
+          patternScale={3}
+          patternDensity={1.2}
+          pixelSizeJitter={0.5}
+          enableRipples
+          rippleSpeed={0.4}
+          rippleThickness={0.12}
+          rippleIntensityScale={1.5}
+          liquid
+          liquidStrength={0.12}
+          liquidRadius={1.2}
+          liquidWobbleSpeed={5}
+          speed={0.6}
+          edgeFade={0.25}
+          transparent
+        />
+      </div>
 
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-20">
         <ThemeToggle />
       </div>
 
-      <Card className="w-full max-w-md shadow-xl border-0 bg-card/90 backdrop-blur-md animate-slide-up relative z-10">
+      <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur-lg relative z-10">
         <CardHeader className="text-center space-y-3">
           <CardTitle className="text-3xl font-bold">
             <TextType

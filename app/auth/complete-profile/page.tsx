@@ -133,27 +133,29 @@ export default function CompleteProfilePage() {
     !isLoading
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-black relative overflow-hidden">
-      <PixelBlast
-        variant="circle"
-        pixelSize={6}
-        color="#B19EEF"
-        patternScale={3}
-        patternDensity={1.2}
-        pixelSizeJitter={0.5}
-        enableRipples
-        rippleSpeed={0.4}
-        rippleThickness={0.12}
-        rippleIntensityScale={1.5}
-        liquid
-        liquidStrength={0.12}
-        liquidRadius={1.2}
-        liquidWobbleSpeed={5}
-        speed={0.6}
-        edgeFade={0.25}
-        transparent
-      />
-      <Card className="w-full max-w-md shadow-xl border-0 bg-card/90 backdrop-blur-md relative z-10">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-black relative">
+      <div className="fixed inset-0 w-full h-full">
+        <PixelBlast
+          variant="circle"
+          pixelSize={6}
+          color="#B19EEF"
+          patternScale={3}
+          patternDensity={1.2}
+          pixelSizeJitter={0.5}
+          enableRipples
+          rippleSpeed={0.4}
+          rippleThickness={0.12}
+          rippleIntensityScale={1.5}
+          liquid
+          liquidStrength={0.12}
+          liquidRadius={1.2}
+          liquidWobbleSpeed={5}
+          speed={0.6}
+          edgeFade={0.25}
+          transparent
+        />
+      </div>
+      <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur-lg relative z-10">
         <CardHeader className="text-center space-y-3">
           <CardTitle className="text-2xl font-bold">Complete Your Profile</CardTitle>
           <CardDescription>

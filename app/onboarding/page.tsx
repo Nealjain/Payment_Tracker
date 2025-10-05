@@ -26,4 +26,6 @@ import {
 } from "@/lib/onboarding-logic"
 
 // Import step components
-import WelcomeStep from "@/components/onboardin
+import WelcomeStep from "@/components/onboarding/welcome-step"
+import UserTypeStep from "@/components/onboarding/user-type-step"
+import FocusAreasStep from "@/components/onboarding/focus-areas-step"
