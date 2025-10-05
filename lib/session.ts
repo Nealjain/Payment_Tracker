@@ -83,23 +83,23 @@ export async function clearSession(): Promise<void> {
 }
 
 export async function validateSession(): Promise<{ valid: boolean; userId?: string; error?: string }> {
-  const session = await getSession()
+  const userId = await getSession()
 
-  if (!session) {
+  if (!userId) {
     return { valid: false, error: "No active session" }
   }
 
   // Verify user still exists in database
   try {
     const supabase = await createClient()
-    const { data, error } = await supabase.from("users").select("id").eq("id", session.userId).single()
+    const { data, error } = await supabase.from("users").select("id").eq("id", userId).single()
 
     if (error || !data) {
       await clearSession()
       return { valid: false, error: "Invalid session" }
     }
 
-    return { valid: true, userId: session.userId }
+    return { valid: true, userId: userId }
   } catch (error) {
     await clearSession()
     return { valid: false, error: "Session validation failed" }
