@@ -183,76 +183,72 @@ export function PaymentFormEnhanced({ payment, onSubmit, onCancel, isLoading = f
 
             <div className="space-y-2">
               <Label>Category</Label>
-              <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger asChild>
+              <div className="relative">
+                <Input
+                  value={formData.category || ""}
+                  onChange={(e) => {
+                    handleInputChange("category", e.target.value)
+                    setOpen(true)
+                  }}
+                  onFocus={() => setOpen(true)}
+                  placeholder="Type or select category..."
+                  className="pr-10"
+                />
+                {formData.category && !categories.find(c => c.name.toLowerCase() === (formData.category || "").toLowerCase()) && (
                   <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={open}
-                    className="w-full justify-between"
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="absolute right-1 top-1 h-8 px-2"
+                    onClick={() => {
+                      setNewCategoryName(formData.category || "")
+                      setShowAddCategory(true)
+                    }}
                   >
-                    {formData.category || "Select category..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
-                  <Command>
-                    <CommandInput placeholder="Search category..." />
-                    <CommandList>
-                      <CommandEmpty>
-                        <div className="p-2 text-center">
-                          <p className="text-sm text-muted-foreground mb-2">No category found</p>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setOpen(false)
-                              setShowAddCategory(true)
-                            }}
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add New Category
-                          </Button>
-                        </div>
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {categories.map((category) => (
-                          <CommandItem
-                            key={category.id}
-                            value={category.name}
-                            onSelect={(currentValue) => {
-                              handleInputChange("category", currentValue)
-                              setOpen(false)
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                formData.category === category.name ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <div
-                              className="w-3 h-3 rounded-full mr-2"
-                              style={{ backgroundColor: category.color || "#B19EEF" }}
-                            />
-                            {category.name}
-                          </CommandItem>
-                        ))}
-                        <CommandItem
-                          onSelect={() => {
-                            setOpen(false)
-                            setShowAddCategory(true)
-                          }}
-                          className="text-primary"
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add New Category
-                        </CommandItem>
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                )}
+              </div>
+              {open && formData.category && (
+                <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-60 overflow-auto">
+                  {categories
+                    .filter((cat) => cat.name.toLowerCase().includes((formData.category || "").toLowerCase()))
+                    .map((category) => (
+                      <div
+                        key={category.id}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-accent cursor-pointer"
+                        onClick={() => {
+                          handleInputChange("category", category.name)
+                          setOpen(false)
+                        }}
+                      >
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: category.color || "#B19EEF" }}
+                        />
+                        <span>{category.name}</span>
+                      </div>
+                    ))}
+                  {categories.filter((cat) => cat.name.toLowerCase().includes((formData.category || "").toLowerCase())).length === 0 && (
+                    <div className="p-3 text-center">
+                      <p className="text-sm text-muted-foreground mb-2">No matching category</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setNewCategoryName(formData.category || "")
+                          setShowAddCategory(true)
+                          setOpen(false)
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add "{formData.category}"
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
