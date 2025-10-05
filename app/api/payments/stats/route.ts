@@ -1,22 +1,33 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
+import { getSession } from "@/lib/session"
 import { getPaymentStats } from "@/lib/payments"
-import { withAuth, withRateLimit } from "@/lib/api-security"
 
-async function handleGetStats(request: NextRequest, userId: string) {
+export async function GET(request: NextRequest) {
   try {
+    const userId = await getSession()
+    
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
     const result = await getPaymentStats(userId)
 
     if (result.success) {
       return NextResponse.json({ success: true, stats: result.stats })
     } else {
-      return NextResponse.json({ success: false, error: result.error }, { status: 400 })
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 500 }
+      )
     }
   } catch (error) {
-    console.error("Get stats error:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    console.error("Stats API error:", error)
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    )
   }
-}
-
-export async function GET(request: NextRequest) {
-  return withRateLimit(request, (req) => withAuth(req, handleGetStats))
 }

@@ -138,13 +138,13 @@ export async function checkUsernameAvailability(username: string): Promise<{ ava
 
 export async function getCurrentUser(): Promise<{ id: string; username: string } | null> {
   try {
-    const session = await getSession()
-    if (!session) {
+    const userId = await getSession()
+    if (!userId) {
       return null
     }
 
     const supabase = await createClient()
-    const { data: user, error } = await supabase.from("users").select("id, username").eq("id", session.userId).single()
+    const { data: user, error } = await supabase.from("users").select("id, username").eq("id", userId).single()
 
     if (error || !user) {
       return null

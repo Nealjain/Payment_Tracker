@@ -1,39 +1,39 @@
-import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
+import { createClient } from "@/lib/supabase/server"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) {
-      return NextResponse.json({ user: null })
+    const userId = await getSession()
+    
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      )
     }
 
     const supabase = await createClient()
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser()
-
-    if (!authUser) {
-      return NextResponse.json({ user: null })
-    }
-
-    // Get user data from users table
-    const { data: userData } = await supabase
+    
+    const { data: user, error } = await supabase
       .from("users")
-      .select("username, email, phone_number")
-      .eq("id", session.userId)
+      .select("id, username, email, phone_number, created_at")
+      .eq("id", userId)
       .single()
 
-    return NextResponse.json({
-      user: {
-        id: authUser.id,
-        email: authUser.email,
-        username: userData?.username,
-        phoneNumber: userData?.phone_number,
-      },
-    })
+    if (error || !user) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json({ success: true, user })
   } catch (error) {
-    return NextResponse.json({ user: null })
+    console.error("User API error:", error)
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    )
   }
 }
