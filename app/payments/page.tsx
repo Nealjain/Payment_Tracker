@@ -205,24 +205,18 @@ export default function PaymentsPage() {
               <h1 className="text-3xl font-bold">Payments</h1>
               <p className="text-muted-foreground">Manage your income and expenses</p>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setShowFilters(!showFilters)}
-                className={showFilters ? "bg-primary text-primary-foreground" : ""}
-              >
-                <Filter className="h-4 w-4" />
-              </Button>
-              <Button onClick={() => setShowForm(!showForm)}>
-                {showForm ? <List className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                {showForm ? "View List" : "Add Payment"}
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowFilters(!showFilters)}
+              className={showFilters ? "bg-primary text-primary-foreground" : ""}
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Filters */}
-          {showFilters && !showForm && (
+          {showFilters && (
             <Card className="p-4 bg-card/95 backdrop-blur-lg">
               <PaymentFiltersComponent
                 filters={{
@@ -243,22 +237,26 @@ export default function PaymentsPage() {
             </Card>
           )}
 
-          {/* Form or List */}
-          {showForm ? (
-            <div className="flex justify-center">
+          {/* Split View: Form and List */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Add/Edit Payment Form */}
+            <div>
               <PaymentForm
                 payment={editingPayment || undefined}
                 onSubmit={editingPayment ? handleUpdatePayment : handleAddPayment}
                 onCancel={handleCancelForm}
               />
             </div>
-          ) : (
-            <PaymentList
-              payments={payments}
-              onEdit={handleEdit}
-              onDelete={handleDeletePayment}
-            />
-          )}
+
+            {/* Payments List */}
+            <div>
+              <PaymentList
+                payments={payments}
+                onEdit={handleEdit}
+                onDelete={handleDeletePayment}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useToast } from "@/hooks/use-toast"
-import { Menu, Plus, Settings, LogOut, Home, CreditCard } from "lucide-react"
+import { Menu, Plus, Settings, LogOut, Home, CreditCard, Users } from "lucide-react"
 
 export function BurgerMenu() {
   const [isOpen, setIsOpen] = useState(false)
@@ -41,24 +41,25 @@ export function BurgerMenu() {
       },
     },
     {
-      icon: Plus,
-      label: "Add Payment",
+      icon: CreditCard,
+      label: "Payments",
       onClick: () => {
         router.push("/payments")
         setIsOpen(false)
       },
     },
     {
-      icon: CreditCard,
-      label: "View Payments",
+      icon: Users,
+      label: "Group Expenses",
+      badge: "Soon",
       onClick: () => {
-        router.push("/payments")
+        router.push("/group-expenses")
         setIsOpen(false)
       },
     },
     {
       icon: Settings,
-      label: "User Settings",
+      label: "Settings",
       onClick: () => {
         router.push("/settings")
         setIsOpen(false)
@@ -94,12 +95,17 @@ export function BurgerMenu() {
               <Button
                 key={item.label}
                 variant="ghost"
-                className="w-full justify-start h-12 text-base hover:bg-muted/50 transition-all duration-200 hover:scale-[1.02]"
+                className="w-full justify-start h-12 text-base hover:bg-muted/50 transition-all duration-200 hover:scale-[1.02] relative"
                 onClick={item.onClick}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <item.icon className="h-5 w-5 mr-3" />
                 {item.label}
+                {item.badge && (
+                  <span className="ml-auto text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full">
+                    {item.badge}
+                  </span>
+                )}
               </Button>
             ))}
 
