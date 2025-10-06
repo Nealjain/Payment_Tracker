@@ -343,7 +343,7 @@ export function GroupChat({ groupId, currentUserId }: GroupChatProps) {
             placeholder={editingMessageId ? "Edit your message..." : "Type a message..."}
             value={editingMessageId ? editingText : newMessage}
             onChange={(e) => editingMessageId ? setEditingText(e.target.value) : setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             disabled={isSendingMessage}
             maxLength={1000}
           />
