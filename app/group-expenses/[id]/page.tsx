@@ -41,6 +41,7 @@ import {
 } from "lucide-react"
 import SharedBackground from "@/components/ui/shared-background"
 import { UpiQRCode } from "@/components/upi-qr-code"
+import { Combobox } from "@/components/ui/combobox"
 import * as XLSX from "xlsx"
 
 interface GroupMember {
@@ -107,9 +108,14 @@ export default function GroupDetailPage() {
   const [expenseDescription, setExpenseDescription] = useState("")
   const [expenseCategory, setExpenseCategory] = useState("")
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split("T")[0])
+  const [dueDate, setDueDate] = useState("")
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
   const [selectedUpiId, setSelectedUpiId] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<"upi" | "cash">("cash")
+  
+  // User's categories and UPI IDs
+  const [userCategories, setUserCategories] = useState<any[]>([])
+  const [userUpiIds, setUserUpiIds] = useState<any[]>([])
   
   const [copied, setCopied] = useState(false)
   const [shareLink, setShareLink] = useState("")
@@ -117,6 +123,8 @@ export default function GroupDetailPage() {
   useEffect(() => {
     fetchGroupData()
     fetchCurrentUser()
+    fetchUserCategories()
+    fetchUserUpiIds()
   }, [groupId])
 
   const fetchCurrentUser = async () => {
@@ -128,6 +136,35 @@ export default function GroupDetailPage() {
       }
     } catch (error) {
       console.error("Failed to fetch user:", error)
+    }
+  }
+
+  const fetchUserCategories = async () => {
+    try {
+      const response = await fetch("/api/categories?type=expense")
+      const result = await response.json()
+      if (result.success) {
+        setUserCategories(result.categories)
+      }
+    } catch (error) {
+      console.error("Failed to fetch categories:", error)
+    }
+  }
+
+  const fetchUserUpiIds = async () => {
+    try {
+      const response = await fetch("/api/upi")
+      const result = await response.json()
+      if (result.success) {
+        setUserUpiIds(result.upiIds)
+        // Set primary UPI as default
+        const primary = result.upiIds.find((upi: any) => upi.is_primary)
+        if (primary) {
+          setSelectedUpiId(primary.upi_id)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch UPI IDs:", error)
     }
   }
 
@@ -226,6 +263,7 @@ export default function GroupDetailPage() {
           description: expenseDescription,
           category: expenseCategory || null,
           date: expenseDate,
+          due_date: dueDate || null,
           splitMethod: "equal",
           splits: selectedMembers.map(userId => ({
             user_id: userId,
@@ -270,6 +308,35 @@ export default function GroupDetailPage() {
     setSelectedMembers(members.map(m => m.user_id))
     setPaymentMethod("cash")
     setSelectedUpiId("")
+  }
+
+  const handleSendReminder = async (expenseId: string) => {
+    try {
+      const response = await fetch(`/api/expenses/${expenseId}/remind`, {
+        method: "POST",
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: result.message || "Reminder sent",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to send reminder",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleDeleteExpense = async (expenseId: string) => {
@@ -658,15 +725,25 @@ export default function GroupDetailPage() {
                               </>
                             )}
                             {isPayer && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDeleteExpense(expense.id)}
-                                className="text-red-500"
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
-                              </Button>
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleSendReminder(expense.id)}
+                                >
+                                  <Bell className="h-4 w-4 mr-1" />
+                                  Remind
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleDeleteExpense(expense.id)}
+                                  className="text-red-500"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Delete
+                                </Button>
+                              </>
                             )}
                           </div>
                         </CardContent>
@@ -729,13 +806,26 @@ export default function GroupDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Date *</Label>
+                <Label>Expense Date *</Label>
                 <Input
                   type="date"
                   value={expenseDate}
                   onChange={(e) => setExpenseDate(e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Due Date (Optional)</Label>
+              <Input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                min={new Date().toISOString().split("T")[0]}
+              />
+              <p className="text-xs text-muted-foreground">
+                When should members pay by? Leave empty for no deadline.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -749,10 +839,21 @@ export default function GroupDetailPage() {
 
             <div className="space-y-2">
               <Label>Category (Optional)</Label>
-              <Input
+              <Combobox
                 value={expenseCategory}
-                onChange={(e) => setExpenseCategory(e.target.value)}
-                placeholder="e.g., Food, Transport, Entertainment"
+                onValueChange={setExpenseCategory}
+                options={userCategories.map(cat => ({ value: cat.name, label: cat.name }))}
+                placeholder="Select or type category"
+                searchPlaceholder="Search or type new category..."
+                emptyText="No categories found"
+                allowNew={true}
+                onAddNew={(newCategory) => {
+                  setExpenseCategory(newCategory)
+                  toast({
+                    title: "New category",
+                    description: `"${newCategory}" will be used for this expense`,
+                  })
+                }}
               />
             </div>
 
@@ -772,10 +873,34 @@ export default function GroupDetailPage() {
             {paymentMethod === "upi" && (
               <div className="space-y-2">
                 <Label>Select UPI ID</Label>
-                <Input
+                <Combobox
                   value={selectedUpiId}
-                  onChange={(e) => setSelectedUpiId(e.target.value)}
-                  placeholder="yourname@paytm"
+                  onValueChange={setSelectedUpiId}
+                  options={userUpiIds.map(upi => ({
+                    value: upi.upi_id,
+                    label: `${upi.name} (${upi.upi_id})${upi.is_primary ? ' - Primary' : ''}`
+                  }))}
+                  placeholder="Select or type UPI ID"
+                  searchPlaceholder="Search or type UPI ID..."
+                  emptyText="No UPI IDs found"
+                  allowNew={true}
+                  onAddNew={(newUpiId) => {
+                    // Validate UPI ID format
+                    const upiRegex = /^[\w.-]+@[\w.-]+$/
+                    if (upiRegex.test(newUpiId)) {
+                      setSelectedUpiId(newUpiId)
+                      toast({
+                        title: "New UPI ID",
+                        description: `"${newUpiId}" will be used for this expense`,
+                      })
+                    } else {
+                      toast({
+                        title: "Invalid UPI ID",
+                        description: "Please enter a valid UPI ID (e.g., name@bank)",
+                        variant: "destructive",
+                      })
+                    }
+                  }}
                 />
               </div>
             )}

@@ -65,7 +65,7 @@ export async function POST(
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
 
-    const { amount, description, category, date, splitMethod, splits } = await request.json()
+    const { amount, description, category, date, due_date, splitMethod, splits } = await request.json()
     const groupId = params.id
 
     if (!amount || !description || !date) {
@@ -139,6 +139,7 @@ export async function POST(
           user_id: split.user_id,
           amount: split.amount,
           is_settled: split.user_id === userId, // Payer is automatically settled
+          due_date: due_date || null,
         }))
       )
 

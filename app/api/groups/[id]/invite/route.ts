@@ -58,17 +58,30 @@ export async function POST(
       return NextResponse.json({ success: false, error: "User is already a member" }, { status: 400 })
     }
 
-    // Check for pending invite
-    const { data: pendingInvite } = await supabase
+    // Check for recent invite (within last hour)
+    const oneHourAgo = new Date()
+    oneHourAgo.setHours(oneHourAgo.getHours() - 1)
+
+    const { data: recentInvite } = await supabase
       .from("group_invites")
-      .select("id")
+      .select("id, created_at, status")
       .eq("group_id", groupId)
       .eq("invited_user_id", invitedUser.id)
-      .eq("status", "pending")
+      .gte("created_at", oneHourAgo.toISOString())
       .single()
 
-    if (pendingInvite) {
-      return NextResponse.json({ success: false, error: "Invite already sent" }, { status: 400 })
+    if (recentInvite) {
+      if (recentInvite.status === "pending") {
+        return NextResponse.json({ 
+          success: false, 
+          error: "Invite already sent. Please wait before sending another." 
+        }, { status: 400 })
+      } else {
+        return NextResponse.json({ 
+          success: false, 
+          error: "An invite was recently sent to this user. Please wait 1 hour before sending another." 
+        }, { status: 400 })
+      }
     }
 
     // Get group name

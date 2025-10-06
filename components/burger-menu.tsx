@@ -1,17 +1,37 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useToast } from "@/hooks/use-toast"
-import { Menu, Plus, Settings, LogOut, Home, CreditCard, Users, Tag, Wallet } from "lucide-react"
+import { Menu, Settings, LogOut, Home, CreditCard, Users, Tag, Wallet, Bell } from "lucide-react"
 
 export function BurgerMenu() {
   const [isOpen, setIsOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const router = useRouter()
   const { toast } = useToast()
+
+  useEffect(() => {
+    fetchUnreadCount()
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await fetch("/api/notifications?unread=true")
+      const result = await response.json()
+      if (result.success) {
+        setUnreadCount(result.notifications.length)
+      }
+    } catch (error) {
+      // Silently fail
+    }
+  }
 
   const handleLogout = async () => {
     try {
@@ -67,10 +87,19 @@ export function BurgerMenu() {
     {
       icon: Users,
       label: "Group Expenses",
-      badge: "Soon",
       onClick: () => {
         router.push("/group-expenses")
         setIsOpen(false)
+      },
+    },
+    {
+      icon: Bell,
+      label: "Notifications",
+      badge: unreadCount > 0 ? unreadCount.toString() : undefined,
+      onClick: () => {
+        router.push("/notifications")
+        setIsOpen(false)
+        setUnreadCount(0)
       },
     },
     {
@@ -118,7 +147,11 @@ export function BurgerMenu() {
                 <item.icon className="h-5 w-5 mr-3" />
                 {item.label}
                 {item.badge && (
-                  <span className="ml-auto text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full">
+                  <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
+                    item.label === "Notifications" 
+                      ? "bg-red-500/20 text-red-500" 
+                      : "bg-yellow-500/20 text-yellow-500"
+                  }`}>
                     {item.badge}
                   </span>
                 )}
