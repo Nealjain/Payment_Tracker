@@ -12,25 +12,39 @@ SELECT
   (SELECT COUNT(*) FROM payments) as payments,
   (SELECT COUNT(*) FROM upi_ids) as upi_ids;
 
--- Create a test user (username: test, PIN: 1234)
--- PIN hash for "1234" using bcrypt
-INSERT INTO users (username, pin_hash, email)
-VALUES (
-  'test',
-  '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYqYK5Y5Y5Y',
-  'test@example.com'
-)
-ON CONFLICT (username) DO NOTHING
-RETURNING id, username;
+-- ============================================
+-- IMPORTANT: You CANNOT create Supabase Auth users via SQL
+-- You must sign up through the app!
+-- ============================================
+-- 
+-- This script will add sample data to any existing user
+-- 
+-- To create a test user:
+-- 1. Go to your app: http://localhost:3000/auth
+-- 2. Click "Sign Up"
+-- 3. Fill in the form:
+--    - Email: test@example.com
+--    - Username: test
+--    - Phone: +1234567890
+--    - Password: Test1234
+--    - PIN: 1234
+-- 4. Then run this script to add sample data
+-- ============================================
 
--- Get the test user ID
+-- Add sample data to ALL users who don't have any
 DO $$
 DECLARE
-  test_user_id UUID;
+  user_record RECORD;
+  category_count INTEGER;
+  payment_count INTEGER;
 BEGIN
-  SELECT id INTO test_user_id FROM users WHERE username = 'test';
-  
-  IF test_user_id IS NOT NULL THEN
+  FOR user_record IN SELECT id, username FROM users LOOP
+    
+    -- Check if user already has categories
+    SELECT COUNT(*) INTO category_count FROM categories WHERE user_id = user_record.id;
+    SELECT COUNT(*) INTO payment_count FROM payments WHERE user_id = user_record.id;
+    
+    IF category_count = 0 THEN
     -- Add default categories for test user
     INSERT INTO categories (user_id, name, type, color, is_default) VALUES
       -- Income categories
