@@ -29,6 +29,7 @@ import { BurgerMenu } from "@/components/burger-menu"
 import { useToast } from "@/hooks/use-toast"
 import { Plus, Edit, Trash2, CreditCard, Star, Copy, Check } from "lucide-react"
 import SimpleBackground from "@/components/ui/simple-background"
+import { UpiQRCode } from "@/components/upi-qr-code"
 import type { UpiId } from "@/lib/types/upi"
 
 export default function UpiPage() {
@@ -350,6 +351,12 @@ export default function UpiPage() {
                       )}
                     </Button>
                   </div>
+                  
+                  {/* QR Code Button */}
+                  <div className="pt-2">
+                    <UpiQRCode upiId={upi.upi_id} name={upi.name} />
+                  </div>
+
                   <div className="flex gap-2">
                     {!upi.is_primary && (
                       <Button

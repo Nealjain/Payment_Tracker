@@ -1,37 +1,122 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { BurgerMenu } from "@/components/burger-menu"
-import { Construction, Users, DollarSign, Split, ArrowRight } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { Users, DollarSign, Plus, UserPlus, QrCode } from "lucide-react"
 import SimpleBackground from "@/components/ui/simple-background"
 import { useRouter } from "next/navigation"
+import type { Group } from "@/lib/types/groups"
 
 export default function GroupExpensesPage() {
   const router = useRouter()
+  const { toast } = useToast()
+  const [groups, setGroups] = useState<Group[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [groupName, setGroupName] = useState("")
+  const [groupDescription, setGroupDescription] = useState("")
 
-  const upcomingFeatures = [
-    {
-      icon: Users,
-      title: "Create Groups",
-      description: "Form expense groups with friends, family, or roommates",
-    },
-    {
-      icon: DollarSign,
-      title: "Split Bills",
-      description: "Easily divide expenses among group members",
-    },
-    {
-      icon: Split,
-      title: "Smart Splitting",
-      description: "Split by percentage, equal parts, or custom amounts",
-    },
-    {
-      icon: ArrowRight,
-      title: "Settlement Tracking",
-      description: "Track who owes whom and settle up easily",
-    },
-  ]
+  useEffect(() => {
+    fetchGroups()
+  }, [])
+
+  const fetchGroups = async () => {
+    try {
+      const response = await fetch("/api/groups")
+      const result = await response.json()
+
+      if (result.success) {
+        setGroups(result.groups)
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load groups",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCreateGroup = async () => {
+    if (!groupName.trim()) {
+      toast({
+        title: "Error",
+        description: "Group name is required",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const response = await fetch("/api/groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: groupName,
+          description: groupDescription,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Group created successfully",
+        })
+        setIsDialogOpen(false)
+        setGroupName("")
+        setGroupDescription("")
+        fetchGroups()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to create group",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="text-center space-y-4 animate-pulse">
+          <div className="w-8 h-8 bg-primary/20 rounded-full animate-spin mx-auto"></div>
+          <p className="text-muted-foreground">Loading groups...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-black relative">
@@ -40,152 +125,128 @@ export default function GroupExpensesPage() {
       <BurgerMenu />
 
       <div className="p-4 pt-20 relative z-10">
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="max-w-6xl mx-auto space-y-6">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="p-4 bg-yellow-500/10 rounded-full border-2 border-yellow-500/20 animate-pulse">
-                <Construction className="h-16 w-16 text-yellow-500" />
-              </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Group Expenses</h1>
+              <p className="text-muted-foreground">Split bills and track shared expenses</p>
             </div>
-            <h1 className="text-4xl font-bold">Group Expenses</h1>
-            <p className="text-xl text-muted-foreground">Coming Soon</p>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Group
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-card/95 backdrop-blur-lg border-0">
+                <DialogHeader>
+                  <DialogTitle>Create New Group</DialogTitle>
+                  <DialogDescription>
+                    Create a group to split expenses with friends, family, or roommates
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="group-name">Group Name</Label>
+                    <Input
+                      id="group-name"
+                      value={groupName}
+                      onChange={(e) => setGroupName(e.target.value)}
+                      placeholder="e.g., Roommates, Trip to Goa"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="group-description">Description (Optional)</Label>
+                    <Textarea
+                      id="group-description"
+                      value={groupDescription}
+                      onChange={(e) => setGroupDescription(e.target.value)}
+                      placeholder="What's this group for?"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreateGroup}>Create Group</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
 
-          {/* Under Development Card */}
-          <Card className="bg-card/95 backdrop-blur-lg border-0 border-yellow-500/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-yellow-500">
-                <Construction className="h-5 w-5" />
-                Under Development
-              </CardTitle>
-              <CardDescription>
-                We're working hard to bring you an amazing group expense management experience
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <p className="text-muted-foreground">
-                  Group Expenses will allow you to split bills and track shared expenses with friends, family, or
-                  roommates. This feature is currently in development and will be available soon.
-                </p>
-
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <h3 className="font-semibold mb-2">What to expect:</h3>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-1">•</span>
-                      <span>Create and manage expense groups</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-1">•</span>
-                      <span>Split bills equally or by custom amounts</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-1">•</span>
-                      <span>Track who owes whom in real-time</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-1">•</span>
-                      <span>Settle up with integrated payment tracking</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-1">•</span>
-                      <span>View group expense history and analytics</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Upcoming Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {upcomingFeatures.map((feature, index) => (
+          {/* Groups List */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {groups.map((group) => (
               <Card
-                key={index}
-                className="bg-card/80 backdrop-blur-sm border-0 hover:bg-card/90 transition-all duration-200"
+                key={group.id}
+                className="bg-card/95 backdrop-blur-lg border-0 hover:bg-card/90 transition-all duration-200 cursor-pointer"
+                onClick={() => router.push(`/group-expenses/${group.id}`)}
               >
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <feature.icon className="h-5 w-5 text-primary" />
-                    {feature.title}
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    {group.name}
                   </CardTitle>
+                  {group.description && (
+                    <CardDescription className="line-clamp-2">{group.description}</CardDescription>
+                  )}
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{feature.description}</p>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Members</span>
+                    <span className="font-semibold">{group.member_count || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Total Expenses</span>
+                    <span className="font-semibold">₹{(group.total_expenses || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        // TODO: Add expense
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Expense
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        // TODO: Invite members
+                      }}
+                    >
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
+
+            {groups.length === 0 && (
+              <Card className="col-span-full bg-card/95 backdrop-blur-lg border-0">
+                <CardContent className="p-12 text-center">
+                  <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold mb-2">No groups yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Create your first group to start splitting expenses
+                  </p>
+                  <Button onClick={() => setIsDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Group
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
-
-          {/* CTA */}
-          <Card className="bg-gradient-to-r from-primary/10 to-primary/5 backdrop-blur-lg border-0 border-primary/20">
-            <CardContent className="p-6 text-center space-y-4">
-              <h3 className="text-xl font-semibold">Want to be notified when it's ready?</h3>
-              <p className="text-muted-foreground">
-                We'll let you know as soon as Group Expenses is available. In the meantime, you can continue managing
-                your personal expenses.
-              </p>
-              <Button onClick={() => router.push("/dashboard")} size="lg">
-                Go to Dashboard
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Timeline */}
-          <Card className="bg-card/95 backdrop-blur-lg border-0">
-            <CardHeader>
-              <CardTitle>Development Timeline</CardTitle>
-              <CardDescription>Our planned rollout for Group Expenses</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <div className="w-0.5 h-full bg-muted"></div>
-                  </div>
-                  <div className="pb-8">
-                    <h4 className="font-semibold text-green-500">Phase 1: Planning ✓</h4>
-                    <p className="text-sm text-muted-foreground">Feature design and architecture</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-3 h-3 rounded-full bg-yellow-500 animate-pulse"></div>
-                    <div className="w-0.5 h-full bg-muted"></div>
-                  </div>
-                  <div className="pb-8">
-                    <h4 className="font-semibold text-yellow-500">Phase 2: Development 🚧</h4>
-                    <p className="text-sm text-muted-foreground">Building core functionality</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-3 h-3 rounded-full bg-muted"></div>
-                    <div className="w-0.5 h-full bg-muted"></div>
-                  </div>
-                  <div className="pb-8">
-                    <h4 className="font-semibold text-muted-foreground">Phase 3: Testing</h4>
-                    <p className="text-sm text-muted-foreground">Beta testing with select users</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-3 h-3 rounded-full bg-muted"></div>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-muted-foreground">Phase 4: Launch</h4>
-                    <p className="text-sm text-muted-foreground">Public release to all users</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
