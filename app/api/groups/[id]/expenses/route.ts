@@ -28,7 +28,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: "Not a member of this group" }, { status: 403 })
     }
 
-    // Get expenses with splits
+    // Get expenses with splits and payer's UPI ID
     const { data: expenses, error } = await supabase
       .from("group_expenses")
       .select(`
@@ -41,6 +41,22 @@ export async function GET(
       `)
       .eq("group_id", groupId)
       .order("date", { ascending: false })
+
+    // Fetch payer's primary UPI ID for each expense
+    if (expenses) {
+      for (const expense of expenses) {
+        const { data: payerUpi } = await supabase
+          .from("upi_ids")
+          .select("upi_id")
+          .eq("user_id", expense.paid_by)
+          .eq("is_primary", true)
+          .single()
+        
+        if (payerUpi) {
+          (expense as any).payer_upi_id = payerUpi.upi_id
+        }
+      }
+    }
 
     if (error) {
       console.error("Error fetching expenses:", error)

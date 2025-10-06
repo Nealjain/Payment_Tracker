@@ -25,23 +25,28 @@ import {
 } from "@/components/ui/select"
 import { BurgerMenu } from "@/components/burger-menu"
 import { useToast } from "@/hooks/use-toast"
-import { 
-  Users, 
-  Plus, 
-  UserPlus, 
-  LogOut, 
-  Trash2, 
+import {
+  Users,
+  Plus,
+  UserPlus,
+  LogOut,
+  Trash2,
   DollarSign,
   Calendar,
   Share2,
   Copy,
   Check,
   QrCode,
-  Download
+  Download,
+  Bell,
+  MessageSquare,
+  X,
+  CheckCircle,
+  XCircle
 } from "lucide-react"
 import SharedBackground from "@/components/ui/shared-background"
 import { UpiQRCode } from "@/components/upi-qr-code"
-import { Combobox } from "@/components/ui/combobox"
+import { AutocompleteInput } from "@/components/ui/autocomplete-input"
 import * as XLSX from "xlsx"
 
 interface GroupMember {
@@ -70,6 +75,7 @@ interface GroupExpense {
     user_id: string
     amount: number
     is_settled: boolean
+    settled_at: string | null
     user: {
       username: string
     }
@@ -101,6 +107,9 @@ export default function GroupDetailPage() {
   const [inviteDialog, setInviteDialog] = useState(false)
   const [expenseDialog, setExpenseDialog] = useState(false)
   const [shareDialog, setShareDialog] = useState(false)
+  const [paymentDialog, setPaymentDialog] = useState(false)
+  const [chatDialog, setChatDialog] = useState(false)
+  const [selectedExpenseForPayment, setSelectedExpenseForPayment] = useState<any>(null)
 
   // Form states
   const [inviteIdentifier, setInviteIdentifier] = useState("")
@@ -112,11 +121,11 @@ export default function GroupDetailPage() {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
   const [selectedUpiId, setSelectedUpiId] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<"upi" | "cash">("cash")
-  
+
   // User's categories and UPI IDs
   const [userCategories, setUserCategories] = useState<any[]>([])
   const [userUpiIds, setUserUpiIds] = useState<any[]>([])
-  
+
   const [copied, setCopied] = useState(false)
   const [shareLink, setShareLink] = useState("")
 
@@ -371,6 +380,101 @@ export default function GroupDetailPage() {
     }
   }
 
+  const handleRequestPaymentApproval = async (splitId: string) => {
+    try {
+      const response = await fetch(`/api/expense-splits/${splitId}/request-approval`, {
+        method: "POST",
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Payment approval requested. Waiting for confirmation.",
+        })
+        setPaymentDialog(false)
+        fetchGroupData()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to request approval",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleApprovePayment = async (splitId: string) => {
+    try {
+      const response = await fetch(`/api/expense-splits/${splitId}/approve`, {
+        method: "POST",
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Payment approved and marked as settled",
+        })
+        fetchGroupData()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to approve payment",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleRejectPayment = async (splitId: string) => {
+    const reason = prompt("Reason for rejection (optional):")
+    
+    try {
+      const response = await fetch(`/api/expense-splits/${splitId}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reason || "Payment not received" }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "Payment Rejected",
+          description: "The member will be notified",
+        })
+        fetchGroupData()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to reject payment",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleSettleExpense = async (expenseId: string) => {
     try {
       const response = await fetch(`/api/expenses/${expenseId}/settle`, {
@@ -464,7 +568,7 @@ export default function GroupDetailPage() {
     }
 
     // Prepare data for Excel
-    const excelData = expenses.flatMap(expense => 
+    const excelData = expenses.flatMap(expense =>
       expense.splits.map(split => ({
         Date: new Date(expense.date).toLocaleDateString(),
         Description: expense.description,
@@ -474,8 +578,8 @@ export default function GroupDetailPage() {
         "Split With": split.user.username,
         "Split Amount": Number(split.amount).toFixed(2),
         Status: split.is_settled ? "Settled" : "Pending",
-        "Settled Date": split.is_settled && split.settled_at 
-          ? new Date(split.settled_at).toLocaleDateString() 
+        "Settled Date": split.is_settled && split.settled_at
+          ? new Date(split.settled_at).toLocaleDateString()
           : "N/A"
       }))
     )
@@ -557,6 +661,14 @@ export default function GroupDetailPage() {
                   )}
                 </div>
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setChatDialog(true)}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Chat
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -707,25 +819,41 @@ export default function GroupDetailPage() {
                           <div className="flex gap-2">
                             {userSplit && !userSplit.is_settled && !isPayer && (
                               <>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSettleExpense(expense.id)}
-                                  className="flex-1"
-                                >
-                                  <DollarSign className="h-4 w-4 mr-1" />
-                                  Mark as Paid
-                                </Button>
-                                {group.upi_id && (
-                                  <UpiQRCode
-                                    upiId={group.upi_id}
-                                    name={group.upi_name || expense.paid_by_user.username}
-                                    amount={Number(userSplit.amount)}
-                                  />
+                                {(userSplit as any).payment_requested_at ? (
+                                  <div className="flex-1 text-center p-2 bg-yellow-500/10 rounded text-yellow-600 text-sm">
+                                    ⏳ Waiting for {expense.paid_by_user.username} to confirm
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedExpenseForPayment({ expense, split: userSplit })
+                                      setPaymentDialog(true)
+                                    }}
+                                    className="flex-1"
+                                  >
+                                    <DollarSign className="h-4 w-4 mr-1" />
+                                    Pay Now
+                                  </Button>
                                 )}
                               </>
                             )}
                             {isPayer && (
                               <>
+                                {expense.splits.some((s: any) => s.payment_requested_at && !s.is_settled) && (
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    onClick={() => {
+                                      setSelectedExpenseForPayment({ expense, split: null })
+                                      setPaymentDialog(true)
+                                    }}
+                                    className="flex-1"
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Review Payments
+                                  </Button>
+                                )}
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -839,20 +967,44 @@ export default function GroupDetailPage() {
 
             <div className="space-y-2">
               <Label>Category (Optional)</Label>
-              <Combobox
+              <AutocompleteInput
                 value={expenseCategory}
                 onValueChange={setExpenseCategory}
-                options={userCategories.map(cat => ({ value: cat.name, label: cat.name }))}
-                placeholder="Select or type category"
-                searchPlaceholder="Search or type new category..."
-                emptyText="No categories found"
-                allowNew={true}
-                onAddNew={(newCategory) => {
-                  setExpenseCategory(newCategory)
-                  toast({
-                    title: "New category",
-                    description: `"${newCategory}" will be used for this expense`,
-                  })
+                options={userCategories.map(cat => cat.name)}
+                placeholder="Type to search or add new category..."
+                onAddNew={async (newCategory) => {
+                  try {
+                    const response = await fetch("/api/categories", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        name: newCategory,
+                        type: "expense",
+                        color: "#3b82f6",
+                      }),
+                    })
+                    const result = await response.json()
+                    if (result.success) {
+                      setExpenseCategory(newCategory)
+                      fetchUserCategories() // Refresh the list
+                      toast({
+                        title: "Category saved",
+                        description: `"${newCategory}" has been added to your categories`,
+                      })
+                    } else {
+                      toast({
+                        title: "Error",
+                        description: result.error || "Failed to save category",
+                        variant: "destructive",
+                      })
+                    }
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      description: "Failed to save category",
+                      variant: "destructive",
+                    })
+                  }
                 }}
               />
             </div>
@@ -873,30 +1025,52 @@ export default function GroupDetailPage() {
             {paymentMethod === "upi" && (
               <div className="space-y-2">
                 <Label>Select UPI ID</Label>
-                <Combobox
+                <AutocompleteInput
                   value={selectedUpiId}
                   onValueChange={setSelectedUpiId}
-                  options={userUpiIds.map(upi => ({
-                    value: upi.upi_id,
-                    label: `${upi.name} (${upi.upi_id})${upi.is_primary ? ' - Primary' : ''}`
-                  }))}
-                  placeholder="Select or type UPI ID"
-                  searchPlaceholder="Search or type UPI ID..."
-                  emptyText="No UPI IDs found"
-                  allowNew={true}
-                  onAddNew={(newUpiId) => {
+                  options={userUpiIds.map(upi => upi.upi_id)}
+                  placeholder="Type to search or add new UPI ID..."
+                  onAddNew={async (newUpiId) => {
                     // Validate UPI ID format
                     const upiRegex = /^[\w.-]+@[\w.-]+$/
-                    if (upiRegex.test(newUpiId)) {
-                      setSelectedUpiId(newUpiId)
-                      toast({
-                        title: "New UPI ID",
-                        description: `"${newUpiId}" will be used for this expense`,
-                      })
-                    } else {
+                    if (!upiRegex.test(newUpiId)) {
                       toast({
                         title: "Invalid UPI ID",
                         description: "Please enter a valid UPI ID (e.g., name@bank)",
+                        variant: "destructive",
+                      })
+                      return
+                    }
+
+                    try {
+                      const response = await fetch("/api/upi", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          upi_id: newUpiId,
+                          name: "My UPI",
+                          is_primary: userUpiIds.length === 0,
+                        }),
+                      })
+                      const result = await response.json()
+                      if (result.success) {
+                        setSelectedUpiId(newUpiId)
+                        fetchUserUpiIds() // Refresh the list
+                        toast({
+                          title: "UPI ID saved",
+                          description: `"${newUpiId}" has been added to your UPI IDs`,
+                        })
+                      } else {
+                        toast({
+                          title: "Error",
+                          description: result.error || "Failed to save UPI ID",
+                          variant: "destructive",
+                        })
+                      }
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to save UPI ID",
                         variant: "destructive",
                       })
                     }
@@ -967,6 +1141,133 @@ export default function GroupDetailPage() {
           <DialogFooter>
             <Button onClick={() => setShareDialog(false)}>Close</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={paymentDialog} onOpenChange={setPaymentDialog}>
+        <DialogContent className="glass-card max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedExpenseForPayment?.split ? "Make Payment" : "Review Payments"}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedExpenseForPayment?.split 
+                ? "Complete payment and request approval"
+                : "Approve or reject payment requests"}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedExpenseForPayment?.split ? (
+            /* Member paying */
+            <div className="space-y-4">
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted-foreground">Amount to pay</p>
+                <p className="text-3xl font-bold">
+                  ₹{Number(selectedExpenseForPayment.split.amount).toFixed(2)}
+                </p>
+                <p className="text-sm">
+                  to {selectedExpenseForPayment.expense.paid_by_user.username}
+                </p>
+              </div>
+
+              {(selectedExpenseForPayment.expense as any).payer_upi_id && (
+                <div className="flex justify-center">
+                  <UpiQRCode
+                    upiId={(selectedExpenseForPayment.expense as any).payer_upi_id}
+                    name={selectedExpenseForPayment.expense.paid_by_user.username}
+                    amount={Number(selectedExpenseForPayment.split.amount)}
+                  />
+                </div>
+              )}
+
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <p className="text-sm font-medium">Payment Instructions:</p>
+                <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                  <li>Scan the QR code or use the UPI ID</li>
+                  <li>Complete the payment</li>
+                  <li>Click "Request Approval" below</li>
+                  <li>Wait for {selectedExpenseForPayment.expense.paid_by_user.username} to confirm</li>
+                </ol>
+              </div>
+            </div>
+          ) : (
+            /* Payer reviewing payments */
+            <div className="space-y-3 max-h-[400px] overflow-y-auto">
+              {selectedExpenseForPayment?.expense.splits
+                .filter((s: any) => s.payment_requested_at && !s.is_settled)
+                .map((split: any) => (
+                  <Card key={split.id} className="bg-muted/30">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="font-medium">{split.user.username}</p>
+                          <p className="text-sm text-muted-foreground">
+                            ₹{Number(split.amount).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Requested {new Date(split.payment_requested_at).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleApprovePayment(split.id)}
+                          className="flex-1"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleRejectPayment(split.id)}
+                          className="flex-1"
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Didn't Receive
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaymentDialog(false)}>
+              Close
+            </Button>
+            {selectedExpenseForPayment?.split && (
+              <Button onClick={() => handleRequestPaymentApproval(selectedExpenseForPayment.split.id)}>
+                Request Approval
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Chat Dialog */}
+      <Dialog open={chatDialog} onOpenChange={setChatDialog}>
+        <DialogContent className="glass-card max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Group Chat</DialogTitle>
+            <DialogDescription>
+              Messages auto-delete after 30 days
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col h-[500px]">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/20 rounded-lg">
+              <p className="text-center text-sm text-muted-foreground">
+                Chat feature coming soon! Messages will auto-delete after 30 days.
+              </p>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Input placeholder="Type a message..." disabled />
+              <Button disabled>Send</Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

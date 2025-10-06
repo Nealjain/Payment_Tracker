@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { BurgerMenu } from "@/components/burger-menu"
 import { useToast } from "@/hooks/use-toast"
-import { Users, DollarSign, Plus, UserPlus, QrCode } from "lucide-react"
+import { Users, DollarSign, Plus, UserPlus, QrCode, Search } from "lucide-react"
 import SharedBackground from "@/components/ui/shared-background"
 import { useRouter } from "next/navigation"
 import type { Group } from "@/lib/types/groups"
@@ -30,6 +30,7 @@ export default function GroupExpensesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [groupName, setGroupName] = useState("")
   const [groupDescription, setGroupDescription] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
     fetchGroups()
@@ -127,109 +128,103 @@ export default function GroupExpensesPage() {
       <div className="p-4 pt-20 relative z-10">
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Group Expenses</h1>
-              <p className="text-muted-foreground">Split bills and track shared expenses</p>
-            </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Group
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-card/95 backdrop-blur-lg border-0">
-                <DialogHeader>
-                  <DialogTitle>Create New Group</DialogTitle>
-                  <DialogDescription>
-                    Create a group to split expenses with friends, family, or roommates
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="group-name">Group Name</Label>
-                    <Input
-                      id="group-name"
-                      value={groupName}
-                      onChange={(e) => setGroupName(e.target.value)}
-                      placeholder="e.g., Roommates, Trip to Goa"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="group-description">Description (Optional)</Label>
-                    <Textarea
-                      id="group-description"
-                      value={groupDescription}
-                      onChange={(e) => setGroupDescription(e.target.value)}
-                      placeholder="What's this group for?"
-                      rows={3}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold">Group Expenses</h1>
+                <p className="text-muted-foreground">Split bills and track shared expenses</p>
+              </div>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Group
                   </Button>
-                  <Button onClick={handleCreateGroup}>Create Group</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent className="bg-card/95 backdrop-blur-lg border-0">
+                  <DialogHeader>
+                    <DialogTitle>Create New Group</DialogTitle>
+                    <DialogDescription>
+                      Create a group to split expenses with friends, family, or roommates
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="group-name">Group Name</Label>
+                      <Input
+                        id="group-name"
+                        value={groupName}
+                        onChange={(e) => setGroupName(e.target.value)}
+                        placeholder="e.g., Roommates, Trip to Goa"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="group-description">Description (Optional)</Label>
+                      <Textarea
+                        id="group-description"
+                        value={groupDescription}
+                        onChange={(e) => setGroupDescription(e.target.value)}
+                        placeholder="What's this group for?"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreateGroup}>Create Group</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search groups..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
 
           {/* Groups List */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {groups.map((group) => (
-              <Card
-                key={group.id}
-                className="bg-card/95 backdrop-blur-lg border-0 hover:bg-card/90 transition-all duration-200 cursor-pointer"
-                onClick={() => router.push(`/group-expenses/${group.id}`)}
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-primary" />
-                    {group.name}
-                  </CardTitle>
-                  {group.description && (
-                    <CardDescription className="line-clamp-2">{group.description}</CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Members</span>
-                    <span className="font-semibold">{group.member_count || 0}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Total Expenses</span>
-                    <span className="font-semibold">₹{(group.total_expenses || 0).toFixed(2)}</span>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        // TODO: Add expense
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Expense
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        // TODO: Invite members
-                      }}
-                    >
-                      <UserPlus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {groups
+              .filter((group) =>
+                group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                group.description?.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+              .map((group) => (
+                <Card
+                  key={group.id}
+                  className="bg-card/95 backdrop-blur-lg border-0 hover:bg-card/90 transition-all duration-200 cursor-pointer"
+                  onClick={() => router.push(`/group-expenses/${group.id}`)}
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-primary" />
+                      {group.name}
+                    </CardTitle>
+                    {group.description && (
+                      <CardDescription className="line-clamp-2">{group.description}</CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Members</span>
+                      <span className="font-semibold">{group.member_count || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Total Expenses</span>
+                      <span className="font-semibold">₹{(group.total_expenses || 0).toFixed(2)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
 
             {groups.length === 0 && (
               <Card className="col-span-full bg-card/95 backdrop-blur-lg border-0">
