@@ -171,22 +171,38 @@ function SimpleView({ stats, recentPayments, recentGroups, router }: any) {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Button onClick={() => router.push("/payments")} className="h-20 flex-col gap-2">
-          <Plus className="h-5 w-5" />
-          Add Payment
-        </Button>
-        <Button onClick={() => router.push("/group-expenses")} variant="outline" className="h-20 flex-col gap-2">
-          <Users className="h-5 w-5" />
-          Groups ({stats.groupsCount})
-        </Button>
-        <Button onClick={() => router.push("/categories")} variant="outline" className="h-20 flex-col gap-2">
-          <BarChart3 className="h-5 w-5" />
-          Categories
-        </Button>
-        <Button onClick={() => router.push("/upi")} variant="outline" className="h-20 flex-col gap-2">
-          <DollarSign className="h-5 w-5" />
-          UPI IDs
-        </Button>
+        <Card className="glass-card hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push("/payments")}>
+          <CardContent className="p-6 flex flex-col items-center justify-center gap-3">
+            <div className="p-3 rounded-full bg-primary/10">
+              <Plus className="h-6 w-6 text-primary" />
+            </div>
+            <span className="font-medium">Add Payment</span>
+          </CardContent>
+        </Card>
+        <Card className="glass-card hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push("/group-expenses")}>
+          <CardContent className="p-6 flex flex-col items-center justify-center gap-3">
+            <div className="p-3 rounded-full bg-primary/10">
+              <Users className="h-6 w-6 text-primary" />
+            </div>
+            <span className="font-medium">Groups ({stats.groupsCount})</span>
+          </CardContent>
+        </Card>
+        <Card className="glass-card hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push("/categories")}>
+          <CardContent className="p-6 flex flex-col items-center justify-center gap-3">
+            <div className="p-3 rounded-full bg-primary/10">
+              <BarChart3 className="h-6 w-6 text-primary" />
+            </div>
+            <span className="font-medium">Categories</span>
+          </CardContent>
+        </Card>
+        <Card className="glass-card hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push("/upi")}>
+          <CardContent className="p-6 flex flex-col items-center justify-center gap-3">
+            <div className="p-3 rounded-full bg-primary/10">
+              <DollarSign className="h-6 w-6 text-primary" />
+            </div>
+            <span className="font-medium">UPI IDs</span>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent Activity */}
@@ -260,6 +276,8 @@ function SimpleView({ stats, recentPayments, recentGroups, router }: any) {
 }
 
 function AdvancedView({ stats, recentPayments, recentGroups, router }: any) {
+  const [showGraphs, setShowGraphs] = useState(false)
+  
   const incomeVsExpense = stats.totalIncome > 0 
     ? ((stats.totalExpenses / stats.totalIncome) * 100).toFixed(1)
     : 0
@@ -267,6 +285,20 @@ function AdvancedView({ stats, recentPayments, recentGroups, router }: any) {
   const savingsRate = stats.totalIncome > 0
     ? (((stats.totalIncome - stats.totalExpenses) / stats.totalIncome) * 100).toFixed(1)
     : 0
+
+  // Calculate category breakdown
+  const categoryData = recentPayments.reduce((acc: any, payment: any) => {
+    const category = payment.category || "Uncategorized"
+    if (!acc[category]) {
+      acc[category] = { income: 0, expense: 0 }
+    }
+    if (payment.type === "income") {
+      acc[category].income += Number(payment.amount)
+    } else {
+      acc[category].expense += Number(payment.amount)
+    }
+    return acc
+  }, {})
 
   return (
     <>
@@ -326,6 +358,112 @@ function AdvancedView({ stats, recentPayments, recentGroups, router }: any) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Graph Toggle */}
+      <Card className="glass-card">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Analytics</CardTitle>
+          <Button
+            variant={showGraphs ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowGraphs(!showGraphs)}
+          >
+            {showGraphs ? "Hide" : "Show"} Graphs
+          </Button>
+        </CardHeader>
+        {showGraphs && (
+          <CardContent>
+            <div className="space-y-6">
+              {/* Income vs Expense Bar */}
+              <div>
+                <p className="text-sm font-medium mb-2">Income vs Expenses</p>
+                <div className="space-y-2">
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-green-500">Income</span>
+                      <span className="font-medium">₹{stats.totalIncome.toFixed(2)}</span>
+                    </div>
+                    <div className="h-3 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-green-500 transition-all"
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-red-500">Expenses</span>
+                      <span className="font-medium">₹{stats.totalExpenses.toFixed(2)}</span>
+                    </div>
+                    <div className="h-3 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-red-500 transition-all"
+                        style={{
+                          width: stats.totalIncome > 0
+                            ? `${(stats.totalExpenses / stats.totalIncome) * 100}%`
+                            : "0%"
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category Breakdown */}
+              <div>
+                <p className="text-sm font-medium mb-2">Category Breakdown</p>
+                <div className="space-y-2">
+                  {Object.entries(categoryData).map(([category, data]: [string, any]) => {
+                    const total = data.income + data.expense
+                    const maxAmount = Math.max(stats.totalIncome, stats.totalExpenses)
+                    return (
+                      <div key={category}>
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span>{category}</span>
+                          <span className="font-medium">₹{total.toFixed(2)}</span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary transition-all"
+                            style={{
+                              width: maxAmount > 0 ? `${(total / maxAmount) * 100}%` : "0%"
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {Object.keys(categoryData).length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No category data available
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Savings Trend */}
+              <div>
+                <p className="text-sm font-medium mb-2">Savings Rate</p>
+                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all ${
+                      Number(savingsRate) > 50
+                        ? "bg-green-500"
+                        : Number(savingsRate) > 20
+                        ? "bg-yellow-500"
+                        : "bg-red-500"
+                    }`}
+                    style={{ width: `${savingsRate}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {savingsRate}% of income saved
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        )}
+      </Card>
 
       {/* Group Stats */}
       <Card className="glass-card">

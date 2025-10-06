@@ -150,7 +150,7 @@ export async function POST(
     const { error: splitsError } = await supabase
       .from("group_expense_splits")
       .insert(
-        expenseSplits.map(split => ({
+        expenseSplits.map((split: any) => ({
           expense_id: expense.id,
           user_id: split.user_id,
           amount: split.amount,

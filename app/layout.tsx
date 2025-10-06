@@ -1,17 +1,23 @@
-import type React from "react"
 import type { Metadata } from "next"
-import { GeistSans } from "geist/font/sans"
-import { GeistMono } from "geist/font/mono"
-import { Analytics } from "@vercel/analytics/next"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
+import { Geist, Geist_Mono } from "next/font/google"
 import "../styles/globals.css"
-import { Suspense } from "react"
+import { Toaster } from "@/components/ui/toaster"
+import { ThemeProvider } from "@/components/theme-provider"
+import { SecurityProvider } from "@/components/security-provider"
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+})
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+})
 
 export const metadata: Metadata = {
-  title: "PayDhan - Smart Expense Management",
-  description: "Your smart expense management companion. Track income, expenses, and manage your finances effortlessly.",
-  generator: "PayDhan"
+  title: "PayDhan - Expense Tracker",
+  description: "Track your expenses and manage group payments",
 }
 
 export default function RootLayout({
@@ -21,14 +27,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={null}>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SecurityProvider>
             {children}
-            <Toaster />
-          </ThemeProvider>
-        </Suspense>
-        <Analytics />
+          </SecurityProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )

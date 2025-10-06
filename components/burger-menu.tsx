@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useToast } from "@/hooks/use-toast"
-import { Menu, Settings, LogOut, Home, CreditCard, Users, Tag, Wallet, Bell } from "lucide-react"
+import { Menu, Settings, LogOut, Home, CreditCard, Users, Tag, Wallet, Bell, FileText } from "lucide-react"
 
 export function BurgerMenu() {
   const [isOpen, setIsOpen] = useState(false)
@@ -100,6 +100,14 @@ export function BurgerMenu() {
         router.push("/notifications")
         setIsOpen(false)
         setUnreadCount(0)
+      },
+    },
+    {
+      icon: FileText,
+      label: "Reports",
+      onClick: () => {
+        router.push("/reports")
+        setIsOpen(false)
       },
     },
     {
