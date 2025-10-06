@@ -21,6 +21,11 @@ export default function CompleteProfilePage() {
   const [showConfirmPin, setShowConfirmPin] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [userEmail, setUserEmail] = useState("")
+  const [existingData, setExistingData] = useState({
+    hasUsername: false,
+    hasPhone: false,
+    hasPin: false,
+  })
   const router = useRouter()
   const { toast } = useToast()
 
@@ -31,9 +36,27 @@ export default function CompleteProfilePage() {
       .then((data) => {
         if (data.user) {
           setUserEmail(data.user.email)
-          // Pre-fill username from email if available
-          if (!username) {
-            setUsername(data.user.email?.split("@")[0] || "")
+          
+          // Check what data already exists
+          const hasUsername = !!data.user.username && data.user.username !== data.user.email?.split("@")[0]
+          const hasPhone = !!data.user.phone_number
+          const hasPin = data.user.pin_hash && data.user.pin_hash !== "temp"
+          
+          setExistingData({
+            hasUsername,
+            hasPhone,
+            hasPin,
+          })
+          
+          // Pre-fill existing data
+          if (hasUsername) {
+            setUsername(data.user.username)
+          } else if (data.user.email) {
+            setUsername(data.user.email.split("@")[0])
+          }
+          
+          if (hasPhone) {
+            setPhoneNumber(data.user.phone_number)
           }
         } else {
           // No session, redirect to auth
@@ -43,7 +66,7 @@ export default function CompleteProfilePage() {
       .catch(() => {
         router.push("/auth")
       })
-  }, [router, username])
+  }, [router])
 
   const handleSubmit = async () => {
     // Validate all fields
@@ -132,6 +155,11 @@ export default function CompleteProfilePage() {
     pin === confirmPin &&
     !isLoading
 
+  const missingFields = []
+  if (!existingData.hasUsername) missingFields.push("Username")
+  if (!existingData.hasPhone) missingFields.push("Phone Number")
+  if (!existingData.hasPin) missingFields.push("Security PIN")
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative">
       <SharedBackground />
@@ -141,42 +169,61 @@ export default function CompleteProfilePage() {
           <CardDescription>
             {userEmail && (
               <span className="block mb-2">
-                Signed in as: <span className="font-medium">{userEmail}</span>
+                Signed in as: <span className="font-medium text-primary">{userEmail}</span>
               </span>
             )}
-            Please provide additional information to secure your account
+            {missingFields.length > 0 ? (
+              <div className="mt-3 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                <p className="text-sm font-medium text-yellow-600 dark:text-yellow-500 mb-1">
+                  📝 Please provide the following:
+                </p>
+                <ul className="text-xs text-yellow-600 dark:text-yellow-500 space-y-1">
+                  {missingFields.map((field) => (
+                    <li key={field}>• {field}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-sm">Update your profile information</p>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="username">Username {!existingData.hasUsername && <span className="text-red-500">*</span>}</Label>
+              {existingData.hasUsername && <span className="text-xs text-green-500">✓ Set</span>}
+            </div>
             <Input
               id="username"
               placeholder="Choose a username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || existingData.hasUsername}
               className="transition-all duration-200 focus:scale-[1.02]"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="phone">Phone Number {!existingData.hasPhone && <span className="text-red-500">*</span>}</Label>
+              {existingData.hasPhone && <span className="text-xs text-green-500">✓ Set</span>}
+            </div>
             <Input
               id="phone"
               type="tel"
               placeholder="+1234567890"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || existingData.hasPhone}
               className="transition-all duration-200 focus:scale-[1.02]"
             />
-            <p className="text-xs text-muted-foreground">Include country code (e.g., +1 for US)</p>
+            <p className="text-xs text-muted-foreground">Include country code (e.g., +1 for US, +91 for India)</p>
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Create 4-Digit PIN</Label>
+              <Label>Create 4-Digit PIN {!existingData.hasPin && <span className="text-red-500">*</span>}</Label>
               <Button
                 type="button"
                 variant="ghost"
@@ -199,7 +246,15 @@ export default function CompleteProfilePage() {
               disabled={isLoading}
               className="text-center text-lg tracking-widest transition-all duration-200 focus:scale-[1.02]"
             />
-            <p className="text-xs text-muted-foreground">This PIN will be used for quick authentication</p>
+            <p className="text-xs text-muted-foreground">
+              {pin.length > 0 && pin.length < PIN_LENGTH && (
+                <span className="text-orange-500">Need {PIN_LENGTH - pin.length} more digit(s)</span>
+              )}
+              {pin.length === PIN_LENGTH && (
+                <span className="text-green-500">✓ PIN complete</span>
+              )}
+              {pin.length === 0 && "This PIN will be used for quick authentication"}
+            </p>
           </div>
 
           <div className="space-y-2">
