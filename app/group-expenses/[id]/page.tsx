@@ -36,10 +36,12 @@ import {
   Share2,
   Copy,
   Check,
-  QrCode
+  QrCode,
+  Download
 } from "lucide-react"
 import SharedBackground from "@/components/ui/shared-background"
 import { UpiQRCode } from "@/components/upi-qr-code"
+import * as XLSX from "xlsx"
 
 interface GroupMember {
   id: string
@@ -384,6 +386,64 @@ export default function GroupDetailPage() {
     )
   }
 
+  const handleExportToExcel = () => {
+    if (expenses.length === 0) {
+      toast({
+        title: "No data",
+        description: "No expenses to export",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Prepare data for Excel
+    const excelData = expenses.flatMap(expense => 
+      expense.splits.map(split => ({
+        Date: new Date(expense.date).toLocaleDateString(),
+        Description: expense.description,
+        Category: expense.category || "N/A",
+        "Total Amount": Number(expense.amount).toFixed(2),
+        "Paid By": expense.paid_by_user.username,
+        "Split With": split.user.username,
+        "Split Amount": Number(split.amount).toFixed(2),
+        Status: split.is_settled ? "Settled" : "Pending",
+        "Settled Date": split.is_settled && split.settled_at 
+          ? new Date(split.settled_at).toLocaleDateString() 
+          : "N/A"
+      }))
+    )
+
+    // Create workbook
+    const wb = XLSX.utils.book_new()
+    const ws = XLSX.utils.json_to_sheet(excelData)
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 12 }, // Date
+      { wch: 30 }, // Description
+      { wch: 15 }, // Category
+      { wch: 12 }, // Total Amount
+      { wch: 15 }, // Paid By
+      { wch: 15 }, // Split With
+      { wch: 12 }, // Split Amount
+      { wch: 10 }, // Status
+      { wch: 12 }, // Settled Date
+    ]
+
+    XLSX.utils.book_append_sheet(wb, ws, "Expenses")
+
+    // Generate filename
+    const filename = `${group?.name.replace(/\s+/g, "_")}_Expenses_${new Date().toISOString().split("T")[0]}.xlsx`
+
+    // Download
+    XLSX.writeFile(wb, filename)
+
+    toast({
+      title: "Success",
+      description: "Expenses exported to Excel",
+    })
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -430,6 +490,14 @@ export default function GroupDetailPage() {
                   )}
                 </div>
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportToExcel}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
