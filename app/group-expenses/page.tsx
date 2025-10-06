@@ -18,7 +18,7 @@ import {
 import { BurgerMenu } from "@/components/burger-menu"
 import { useToast } from "@/hooks/use-toast"
 import { Users, DollarSign, Plus, UserPlus, QrCode } from "lucide-react"
-import SimpleBackground from "@/components/ui/simple-background"
+import SharedBackground from "@/components/ui/shared-background"
 import { useRouter } from "next/navigation"
 import type { Group } from "@/lib/types/groups"
 
@@ -109,7 +109,7 @@ export default function GroupExpensesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4 animate-pulse">
           <div className="w-8 h-8 bg-primary/20 rounded-full animate-spin mx-auto"></div>
           <p className="text-muted-foreground">Loading groups...</p>
@@ -119,8 +119,8 @@ export default function GroupExpensesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative">
-      <SimpleBackground />
+    <div className="min-h-screen relative">
+      <SharedBackground />
 
       <BurgerMenu />
 

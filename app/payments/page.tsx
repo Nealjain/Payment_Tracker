@@ -11,7 +11,7 @@ import { BurgerMenu } from "@/components/burger-menu"
 import { useToast } from "@/hooks/use-toast"
 import { Plus, List, Filter } from "lucide-react"
 import type { Payment, PaymentFormData } from "@/lib/types"
-import SimpleBackground from "@/components/ui/simple-background"
+import SharedBackground from "@/components/ui/shared-background"
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([])
@@ -162,7 +162,7 @@ export default function PaymentsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4 animate-pulse">
           <div className="w-8 h-8 bg-primary/20 rounded-full animate-spin mx-auto"></div>
           <p className="text-muted-foreground">Loading payments...</p>
@@ -172,8 +172,8 @@ export default function PaymentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative">
-      <SimpleBackground />
+    <div className="min-h-screen relative">
+      <SharedBackground />
 
       <BurgerMenu />
 

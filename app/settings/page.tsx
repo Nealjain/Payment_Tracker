@@ -22,7 +22,7 @@ import {
 import { BurgerMenu } from "@/components/burger-menu"
 import { useToast } from "@/hooks/use-toast"
 import { Trash2, Shield, User, Eye, EyeOff, Mail, Phone, Key } from "lucide-react"
-import SimpleBackground from "@/components/ui/simple-background"
+import SharedBackground from "@/components/ui/shared-background"
 import { PhoneInput } from "react-international-phone"
 import "react-international-phone/style.css"
 
@@ -400,8 +400,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative">
-      <SimpleBackground />
+    <div className="min-h-screen relative">
+      <SharedBackground />
       <BurgerMenu />
 
       <div className="p-4 pt-20 relative z-10">

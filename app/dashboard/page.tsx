@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { TrendingUp, TrendingDown, DollarSign, CreditCard, Plus, PieChart } from "lucide-react"
 import TextType from "@/components/ui/text-type"
-import PixelBlast from "@/components/ui/pixel-blast"
+import SharedBackground from "@/components/ui/shared-background"
 import type { Payment } from "@/lib/types"
 
 interface DashboardStats {
@@ -100,7 +100,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4 animate-pulse">
           <div className="w-8 h-8 bg-primary/20 rounded-full animate-spin mx-auto"></div>
           <p className="text-muted-foreground">Loading dashboard...</p>
@@ -110,29 +110,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative">
-      {/* Animated Background */}
-      <div className="fixed inset-0 w-full h-full">
-        <PixelBlast
-          variant="circle"
-          pixelSize={6}
-          color="#B19EEF"
-          patternScale={3}
-          patternDensity={1.2}
-          pixelSizeJitter={0.5}
-          enableRipples
-          rippleSpeed={0.4}
-          rippleThickness={0.12}
-          rippleIntensityScale={1.5}
-          liquid
-          liquidStrength={0.12}
-          liquidRadius={1.2}
-          liquidWobbleSpeed={5}
-          speed={0.6}
-          edgeFade={0.25}
-          transparent
-        />
-      </div>
+    <div className="min-h-screen relative">
+      <SharedBackground />
 
       <BurgerMenu />
 

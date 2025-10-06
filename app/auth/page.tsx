@@ -15,7 +15,7 @@ import { signInWithGoogle } from "@/lib/auth-client"
 import { PhoneInput } from "react-international-phone"
 import "react-international-phone/style.css"
 import TextType from "@/components/ui/text-type"
-import PixelBlast from "@/components/ui/pixel-blast"
+import SharedBackground from "@/components/ui/shared-background"
 
 const PIN_LENGTH = 4
 
@@ -344,29 +344,8 @@ export default function AuthPage() {
     !isLoading
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-black relative">
-      {/* Animated Background */}
-      <div className="fixed inset-0 w-full h-full">
-        <PixelBlast
-          variant="circle"
-          pixelSize={6}
-          color="#B19EEF"
-          patternScale={3}
-          patternDensity={1.2}
-          pixelSizeJitter={0.5}
-          enableRipples
-          rippleSpeed={0.4}
-          rippleThickness={0.12}
-          rippleIntensityScale={1.5}
-          liquid
-          liquidStrength={0.12}
-          liquidRadius={1.2}
-          liquidWobbleSpeed={5}
-          speed={0.6}
-          edgeFade={0.25}
-          transparent
-        />
-      </div>
+    <div className="min-h-screen w-full flex items-center justify-center p-4 relative">
+      <SharedBackground />
 
       <div className="absolute top-4 right-4 z-20">
         <ThemeToggle />
