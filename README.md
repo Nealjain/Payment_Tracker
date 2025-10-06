@@ -1,15 +1,20 @@
-# PayDhan - Expense Tracker
+# PayDhan - Expense Tracker & Group Payment Manager
 
-A modern expense tracking application built with Next.js, Supabase, and TypeScript.
+A modern expense tracking and group payment management application built with Next.js, Supabase, and TypeScript.
 
 ## Features
 
 - 💰 Track income and expenses
 - 📊 Visual dashboard with charts
 - 🏷️ Custom categories
-- 💳 UPI ID management
-- 👥 Group expenses (coming soon)
-- 🔐 Secure authentication
+- 💳 UPI ID management with QR codes
+- 👥 **Group expenses with split payments**
+- 💬 **Real-time group chat**
+- ✏️ **Edit/delete messages (within 1 minute)**
+- ✅ Payment approval workflow
+- 📤 Export expenses to Excel
+- 🔔 Payment reminders and notifications
+- 🔐 Secure authentication with RLS
 
 ## Tech Stack
 

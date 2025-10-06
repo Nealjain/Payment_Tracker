@@ -47,6 +47,7 @@ import {
 import SharedBackground from "@/components/ui/shared-background"
 import { UpiQRCode } from "@/components/upi-qr-code"
 import { AutocompleteInput } from "@/components/ui/autocomplete-input"
+import { GroupChat } from "@/components/group-chat"
 import * as XLSX from "xlsx"
 
 interface GroupMember {
@@ -1257,17 +1258,7 @@ export default function GroupDetailPage() {
               Messages auto-delete after 30 days
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col h-[500px]">
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/20 rounded-lg">
-              <p className="text-center text-sm text-muted-foreground">
-                Chat feature coming soon! Messages will auto-delete after 30 days.
-              </p>
-            </div>
-            <div className="mt-4 flex gap-2">
-              <Input placeholder="Type a message..." disabled />
-              <Button disabled>Send</Button>
-            </div>
-          </div>
+          <GroupChat groupId={groupId} currentUserId={currentUserId} />
         </DialogContent>
       </Dialog>
     </div>
