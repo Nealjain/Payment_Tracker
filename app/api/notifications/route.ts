@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
       .from("notifications")
       .select("*")
       .eq("user_id", userId)
+      .gte("created_at", new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString())
       .order("created_at", { ascending: false })
 
     if (unreadOnly) {

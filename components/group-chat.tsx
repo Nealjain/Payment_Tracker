@@ -361,11 +361,7 @@ export function GroupChat({ groupId, currentUserId }: GroupChatProps) {
           </Button>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground mt-2 text-center">
-        {editingMessageId 
-          ? "Press Enter to update • Esc to cancel" 
-          : "Press Enter to send • Shift+Enter for new line • Edit/delete within 1 min"}
-      </p>
+
     </div>
   )
 }
