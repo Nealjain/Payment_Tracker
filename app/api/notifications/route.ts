@@ -90,3 +90,39 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }
+
+// DELETE - Delete notification
+export async function DELETE(request: NextRequest) {
+  try {
+    const userId = await getSession()
+    if (!userId) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const notificationId = searchParams.get("id")
+
+    if (!notificationId) {
+      return NextResponse.json({ success: false, error: "Notification ID required" }, { status: 400 })
+    }
+
+    const supabase = await createClient()
+
+    // Delete notification
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("id", notificationId)
+      .eq("user_id", userId)
+
+    if (error) {
+      console.error("Error deleting notification:", error)
+      return NextResponse.json({ success: false, error: "Failed to delete notification" }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error in notifications DELETE:", error)
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+  }
+}

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { BurgerMenu } from "@/components/burger-menu"
 import { useToast } from "@/hooks/use-toast"
-import { Bell, Check, CheckCheck, X, UserPlus, DollarSign, Users, LogOut } from "lucide-react"
+import { Bell, Check, CheckCheck, X, UserPlus, DollarSign, LogOut } from "lucide-react"
 import SharedBackground from "@/components/ui/shared-background"
 import type { Notification } from "@/lib/types/notifications"
 
@@ -86,6 +86,30 @@ export default function NotificationsPage() {
       toast({
         title: "Error",
         description: "Failed to mark all as read",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteNotification = async (notificationId: string) => {
+    try {
+      const response = await fetch(`/api/notifications?id=${notificationId}`, {
+        method: "DELETE",
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setNotifications(prev => prev.filter(n => n.id !== notificationId))
+        toast({
+          title: "Deleted",
+          description: "Notification deleted",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete notification",
         variant: "destructive",
       })
     }
@@ -257,9 +281,22 @@ export default function NotificationsPage() {
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-1">
                           <h4 className="font-semibold">{notification.title}</h4>
-                          {!notification.is_read && (
-                            <span className="h-2 w-2 bg-primary rounded-full"></span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {!notification.is_read && (
+                              <span className="h-2 w-2 bg-primary rounded-full"></span>
+                            )}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteNotification(notification.id)
+                              }}
+                            >
+                              <X className="h-4 w-4 text-muted-foreground hover:text-red-500" />
+                            </Button>
+                          </div>
                         </div>
                         <p className="text-sm text-muted-foreground mb-2">
                           {notification.message}
