@@ -31,16 +31,20 @@ export default function PaymentsPage() {
       const response = await fetch("/api/payments")
       const result = await response.json()
 
+      console.log("📊 Fetch payments response:", result)
+
       if (result.success) {
         setPayments(result.payments || [])
       } else {
+        console.error("❌ Failed to load payments:", result.error)
         toast({
           title: "Error",
-          description: "Failed to load payments",
+          description: result.error || "Failed to load payments",
           variant: "destructive",
         })
       }
     } catch (error) {
+      console.error("❌ Fetch payments error:", error)
       toast({
         title: "Error",
         description: "Something went wrong",
@@ -53,6 +57,7 @@ export default function PaymentsPage() {
 
   const handleAddPayment = async (data: PaymentFormData) => {
     try {
+      console.log("💰 Adding payment:", data)
       const response = await fetch("/api/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -60,6 +65,7 @@ export default function PaymentsPage() {
       })
 
       const result = await response.json()
+      console.log("📥 Add payment response:", result)
 
       if (result.success) {
         toast({
@@ -69,6 +75,7 @@ export default function PaymentsPage() {
         setShowForm(false)
         fetchPayments()
       } else {
+        console.error("❌ Failed to add payment:", result.error)
         toast({
           title: "Error",
           description: result.error || "Failed to add payment",
@@ -76,6 +83,7 @@ export default function PaymentsPage() {
         })
       }
     } catch (error) {
+      console.error("❌ Add payment error:", error)
       toast({
         title: "Error",
         description: "Something went wrong",

@@ -41,12 +41,15 @@ export default function GroupExpensesPage() {
       const response = await fetch("/api/groups")
       const result = await response.json()
 
+      console.log("👥 Fetch groups response:", result)
+
       if (result.success) {
-        setGroups(result.groups)
+        setGroups(result.groups || [])
       } else {
+        console.error("❌ Failed to load groups:", result.error)
         toast({
           title: "Error",
-          description: "Failed to load groups",
+          description: result.error || "Failed to load groups",
           variant: "destructive",
         })
       }
@@ -193,7 +196,7 @@ export default function GroupExpensesPage() {
 
           {/* Groups List */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {groups
+            {(groups || [])
               .filter((group) =>
                 group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 group.description?.toLowerCase().includes(searchQuery.toLowerCase())
