@@ -30,15 +30,19 @@ export default function CompleteProfilePage() {
   const { toast } = useToast()
 
   useEffect(() => {
+    let mounted = true
+
     // Check for pending OAuth data first
     fetch("/api/auth/pending-oauth")
       .then((res) => res.json())
       .then((data) => {
-        if (data.success && data.email) {
+        if (!mounted) return
+
+        if (data.success && data.data?.email) {
           // New OAuth user - needs to complete profile
-          setUserEmail(data.email)
+          setUserEmail(data.data.email)
           // Suggest username from email
-          setUsername(data.email.split("@")[0])
+          setUsername(data.data.email.split("@")[0])
           setExistingData({
             hasUsername: false,
             hasPhone: false,
@@ -49,6 +53,8 @@ export default function CompleteProfilePage() {
           return fetch("/api/auth/user")
             .then((res) => res.json())
             .then((userData) => {
+              if (!mounted) return
+
               if (userData.success && userData.data?.user) {
                 const user = userData.data.user
                 setUserEmail(user.email)
@@ -77,15 +83,28 @@ export default function CompleteProfilePage() {
                   setPhoneNumber(user.phone_number)
                 }
               } else {
-                // No session or pending OAuth, redirect to auth
-                router.push("/auth")
+                // No session or pending OAuth, redirect to auth after a delay
+                console.log("No pending OAuth or session, redirecting to auth")
+                setTimeout(() => {
+                  if (mounted) router.push("/auth")
+                }, 1000)
               }
             })
         }
       })
-      .catch(() => {
-        router.push("/auth")
+      .catch((error) => {
+        console.error("Error loading profile data:", error)
+        if (mounted) {
+          // Don't redirect immediately on error, give user a chance to see what happened
+          setTimeout(() => {
+            if (mounted) router.push("/auth")
+          }, 2000)
+        }
       })
+
+    return () => {
+      mounted = false
+    }
   }, [router])
 
   const handleSubmit = async () => {

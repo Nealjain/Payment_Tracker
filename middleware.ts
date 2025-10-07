@@ -16,11 +16,15 @@ export async function middleware(request: NextRequest) {
 
   // Check for pending OAuth (new users completing profile)
   const cookieStore = await cookies()
-  const hasPendingOAuth = cookieStore.get("pending_oauth_email")?.value
+  const hasPendingOAuth = !!cookieStore.get("pending_oauth_email")?.value
 
-  // If on profile completion page and has pending OAuth, allow access
-  if (profileRoutes.some(route => pathname.startsWith(route)) && hasPendingOAuth) {
-    return NextResponse.next()
+  // IMPORTANT: If on profile completion page, check for pending OAuth first
+  if (profileRoutes.some(route => pathname.startsWith(route))) {
+    if (hasPendingOAuth) {
+      // Has pending OAuth - allow access without session
+      return NextResponse.next()
+    }
+    // No pending OAuth - will check for session below
   }
 
   // Check if user is authenticated
@@ -29,6 +33,7 @@ export async function middleware(request: NextRequest) {
 
   if (!session) {
     // Not authenticated and no pending OAuth - redirect to auth
+    console.log(`[Middleware] No session for ${pathname}, redirecting to /auth`)
     const url = new URL("/auth", request.url)
     url.searchParams.set("redirect", pathname)
     return NextResponse.redirect(url)
