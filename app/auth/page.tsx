@@ -43,21 +43,6 @@ export default function AuthPage() {
   const router = useRouter()
   const { toast } = useToast()
 
-  // Clear any cached auth state on mount
-  useEffect(() => {
-    // Force clear any cached form data
-    setEmail("")
-    setPassword("")
-    setPin("")
-    setUsername("")
-    setPhoneNumber("")
-    setConfirmPassword("")
-    setConfirmPin("")
-    setFlowType("email")
-    setSignupStep("password")
-    setLoginMethod("password")
-  }, [])
-
   // Check if email exists and route to signin or signup
   const handleEmailCheck = async () => {
     if (!email.trim()) {
