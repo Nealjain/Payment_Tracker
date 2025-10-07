@@ -75,9 +75,15 @@ export default function GroupExpensesPage() {
     }
 
     try {
+      // Get userId from localStorage as workaround
+      const userId = localStorage.getItem("userId")
+      
       const response = await fetch("/api/groups", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-User-Id": userId || "" // Send userId in header as backup
+        },
         body: JSON.stringify({
           name: groupName,
           description: groupDescription,

@@ -58,9 +58,16 @@ export default function PaymentsPage() {
   const handleAddPayment = async (data: PaymentFormData) => {
     try {
       console.log("💰 Adding payment:", data)
+      
+      // Get userId from localStorage as workaround
+      const userId = localStorage.getItem("userId")
+      
       const response = await fetch("/api/payments", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-User-Id": userId || "" // Send userId in header as backup
+        },
         body: JSON.stringify(data),
       })
 

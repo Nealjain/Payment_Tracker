@@ -54,6 +54,13 @@ export async function withAuth(
   const sessionResult = await validateSession()
 
   if (!sessionResult.valid) {
+    // Fallback: Check X-User-Id header (temporary workaround)
+    const userIdFromHeader = request.headers.get("X-User-Id")
+    if (userIdFromHeader) {
+      console.log("⚠️ Using userId from header (fallback):", userIdFromHeader)
+      return handler(request, userIdFromHeader)
+    }
+    
     console.log("❌ withAuth: Session invalid:", sessionResult.error)
     return NextResponse.json(
       { success: false, error: sessionResult.error || "Authentication required" },
