@@ -45,18 +45,39 @@ All required variables are set:
 
 ## How to Test
 
-### Option 1: Run Dev Server
+### Option 1: Clear Cache & Full Check (RECOMMENDED)
+```bash
+./clear-and-check.sh
+```
+This will:
+- Clear all caches (.next, node_modules/.cache, npm)
+- Verify environment variables
+- Reinstall dependencies
+- Check TypeScript
+- Test build
+- Verify all key files
+
+### Option 2: Quick Clear (Fast)
+```bash
+./quick-clear.sh
+```
+Just clears caches, then run:
+```bash
+npm run dev
+```
+
+### Option 3: Run Dev Server Only
 ```bash
 npm run dev
 ```
 Then visit http://localhost:3000/auth
 
-### Option 2: Run Error Check
+### Option 4: Run Error Check
 ```bash
 ./check-errors.sh
 ```
 
-### Option 3: Test Build
+### Option 5: Test Build
 ```bash
 npm run build
 ```
