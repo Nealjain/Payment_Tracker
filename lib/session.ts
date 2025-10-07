@@ -36,10 +36,11 @@ export async function createSession(
     cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: SESSION_DURATION / 1000,
       path: "/",
     })
+    console.log("🍪 Session cookie set with sameSite: lax")
   }
 
   return sessionToken
