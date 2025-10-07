@@ -42,8 +42,8 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     try {
       const [paymentsRes, groupsRes] = await Promise.all([
-        fetch("/api/payments"),
-        fetch("/api/groups")
+        fetch("/api/payments", { credentials: 'include' }),
+        fetch("/api/groups", { credentials: 'include' })
       ])
 
       const paymentsData = await paymentsRes.json()

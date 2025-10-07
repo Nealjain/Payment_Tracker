@@ -25,31 +25,35 @@ export default function JoinGroupPage() {
 
   const fetchGroupInfo = async () => {
     try {
-      const response = await fetch(`/api/groups/${groupId}`)
+      // Try to load invite information (public)
+      const response = await fetch(`/api/invites/${groupId}`)
       const result = await response.json()
 
       if (result.success) {
         setGroup(result.group)
-        
-        // Check if already a member
-        const membersRes = await fetch(`/api/groups/${groupId}/members`)
-        const membersData = await membersRes.json()
-        
-        if (membersData.success) {
-          const userRes = await fetch("/api/auth/user")
-          const userData = await userRes.json()
-          
-          if (userData.success && userData.user) {
-            const isMember = membersData.members.some(
-              (m: any) => m.user_id === userData.user.id
-            )
-            setAlreadyMember(isMember)
+        // If user is logged in, check membership
+        try {
+          const membersRes = await fetch(`/api/groups/${result.group.id}/members`, { credentials: 'include' })
+          const membersData = await membersRes.json()
+
+          if (membersData.success) {
+            const userRes = await fetch("/api/auth/user", { credentials: 'include' })
+            const userData = await userRes.json()
+
+            if (userData.success && userData.user) {
+              const isMember = membersData.members.some(
+                (m: any) => m.user_id === userData.user.id
+              )
+              setAlreadyMember(isMember)
+            }
           }
+        } catch (e) {
+          // ignore membership check errors for unauthenticated users
         }
       } else {
         toast({
           title: "Error",
-          description: "Group not found or invite expired",
+          description: result.error || "Group not found or invite expired",
           variant: "destructive",
         })
       }
@@ -68,7 +72,7 @@ export default function JoinGroupPage() {
     setIsJoining(true)
     try {
       // Check if user is logged in
-      const userRes = await fetch("/api/auth/user")
+  const userRes = await fetch("/api/auth/user", { credentials: 'include' })
       const userData = await userRes.json()
 
       if (!userData.success || !userData.user) {
@@ -81,10 +85,12 @@ export default function JoinGroupPage() {
       }
 
       // Join the group by adding as member
-      const response = await fetch(`/api/groups/${groupId}/members`, {
-        method: "POST",
+      // Accept invite via invites endpoint (requires auth)
+      const response = await fetch(`/api/invites/${groupId}`, {
+        method: "PATCH",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userData.user.id }),
+        body: JSON.stringify({ action: 'accept' }),
       })
 
       const result = await response.json()

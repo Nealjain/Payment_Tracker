@@ -102,3 +102,41 @@ export async function PATCH(
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }
+
+// GET - Public view of an invite (used on join pages)
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const inviteId = params.id
+    const supabase = await createClient()
+
+    // Get invite with group info
+    const { data: invite, error: inviteError } = await supabase
+      .from("group_invites")
+      .select("*, groups(*)")
+      .eq("id", inviteId)
+      .single()
+
+    if (inviteError || !invite) {
+      return NextResponse.json({ success: false, error: "Invite not found" }, { status: 404 })
+    }
+
+    // Check expiry
+    if (new Date(invite.expires_at) < new Date()) {
+      // Mark expired (best-effort)
+      await supabase
+        .from("group_invites")
+        .update({ status: "expired" })
+        .eq("id", inviteId)
+
+      return NextResponse.json({ success: false, error: "Invite has expired" }, { status: 400 })
+    }
+
+    return NextResponse.json({ success: true, invite, group: invite.groups })
+  } catch (error) {
+    console.error("Error in invite GET:", error)
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+  }
+}
