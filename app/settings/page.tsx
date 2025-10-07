@@ -68,14 +68,27 @@ export default function SettingsPage() {
     try {
       const response = await fetch("/api/auth/user")
       const result = await response.json()
-      if (result.user) {
-        setUserInfo(result.user)
-        setUsername(result.user.username || "")
-        setEmail(result.user.email || "")
-        setPhoneNumber(result.user.phone_number || "")
+      
+      if (result.success && result.data?.user) {
+        const user = result.data.user
+        setUserInfo(user)
+        setUsername(user.username || "")
+        setEmail(user.email || "")
+        setPhoneNumber(user.phone_number || "")
+      } else if (!result.success) {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to load user info",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error("Failed to fetch user info:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load user info",
+        variant: "destructive",
+      })
     }
   }
 

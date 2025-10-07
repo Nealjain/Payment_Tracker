@@ -23,7 +23,7 @@ export default function AuthPage() {
   const [signupStep, setSignupStep] = useState<"email" | "password" | "phone" | "pin" | "username">("email")
   // Form fields
   const [email, setEmail] = useState("")
-  const [identifier, setIdentifier] = useState("") // Can be email or username
+  const [identifier, setIdentifier] = useState("") // legacy, keep for display
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [username, setUsername] = useState("")
@@ -39,79 +39,44 @@ export default function AuthPage() {
   const router = useRouter()
   const { toast } = useToast()
 
-  const handleIdentifierCheck = async () => {
-    if (activeTab === "signin") {
-      // For sign in, accept email or username
-      if (!identifier.trim()) {
-        toast({
-          title: "Required",
-          description: "Please enter your email or username",
-          variant: "destructive",
-        })
-        return
-      }
-      // Populate email/username/phoneNumber from identifier so handleSignIn can use them
-      const trimmed = identifier.trim()
-      if (trimmed.includes("@")) {
-        setEmail(trimmed)
-      } else if (/^\+?\d[\d\s()-]{6,}$/.test(trimmed)) {
-        setPhoneNumber(trimmed)
+  const handleEmailCheck = async () => {
+    // Unified email-first flow: always ask for email first
+    if (!email.trim()) {
+      toast({ title: "Email required", description: "Please enter your email address", variant: "destructive" })
+      return
+    }
+
+    const emailTrimmed = email.trim()
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(emailTrimmed)) {
+      toast({ title: "Invalid email", description: "Please enter a valid email address", variant: "destructive" })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailTrimmed }),
+      })
+
+      const result = await response.json()
+
+      if (result.exists) {
+        // Email exists -> proceed to sign-in details
+        setStep("details")
       } else {
-        setUsername(trimmed)
+        // Email not registered -> switch to sign up flow with email prefilled
+        setActiveTab("signup")
+        setSignupStep("password")
+        // keep email in state so sign up form is prefilled
+        toast({ title: "Create account", description: "No account found. Proceed to sign up.", variant: "default" })
       }
-      // Just proceed to next step for sign in
-      setStep("details")
-    } else {
-      // For sign up, only accept email
-      if (!email.trim()) {
-        toast({
-          title: "Email required",
-          description: "Please enter your email address",
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(email.trim())) {
-        toast({
-          title: "Invalid email",
-          description: "Please enter a valid email address",
-          variant: "destructive",
-        })
-        return
-      }
-
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/auth/check-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim() }),
-        })
-
-        const result = await response.json()
-
-        if (result.exists) {
-          toast({
-            title: "Email already registered",
-            description: "This email is already registered. Please sign in instead.",
-            variant: "destructive",
-          })
-        } else {
-          // Email available, show registration form
-          setStep("details")
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Something went wrong. Please try again.",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
+    } catch (error) {
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -368,7 +333,7 @@ export default function AuthPage() {
     else if (signupStep === "username") setSignupStep("pin")
   }
 
-  const canProceedEmail = activeTab === "signin" ? identifier.trim() && !isLoading : email.trim() && !isLoading
+  const canProceedEmail = email.trim() && !isLoading
   const canSignIn = (password && !isLoading) || (pin.length === PIN_LENGTH && !isLoading)
   const canSignUp =
     password &&
@@ -425,25 +390,23 @@ export default function AuthPage() {
               {step === "email" ? (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-identifier">Email or Username</Label>
+                    <Label htmlFor="signin-email">Email address</Label>
                     <Input
-                      id="signin-identifier"
-                      type="text"
-                      placeholder="Enter your email or username"
-                      value={identifier}
-                      onChange={(e) => setIdentifier(e.target.value)}
-                      onKeyPress={(e) => e.key === "Enter" && handleIdentifierCheck()}
+                      id="signin-email"
+                      type="email"
+                      placeholder="your.email@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && handleEmailCheck()}
                       disabled={isLoading}
                       autoFocus
                       className="transition-all duration-200 focus:scale-[1.02]"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      You can use either your email or username
-                    </p>
+                    <p className="text-xs text-muted-foreground">We'll check whether this email is registered and continue accordingly.</p>
                   </div>
 
                   <Button
-                    onClick={handleIdentifierCheck}
+                    onClick={handleEmailCheck}
                     className="w-full h-12 text-base font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                     disabled={!canProceedEmail}
                   >
@@ -455,12 +418,12 @@ export default function AuthPage() {
                   <div className="space-y-2">
                     <Label className="text-sm text-muted-foreground">Signing in as:</Label>
                     <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <span className="font-medium">{identifier}</span>
+                      <span className="font-medium">{email}</span>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={handleBack}
+                        onClick={() => { setStep("email"); setEmail(""); setPassword(""); setPin("") }}
                         className="h-8 text-xs"
                       >
                         Change
