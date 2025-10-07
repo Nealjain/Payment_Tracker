@@ -18,7 +18,6 @@ import {
   BarChart3
 } from "lucide-react"
 import SharedBackground from "@/components/ui/shared-background"
-import TutorialModal from "@/components/tutorial-modal"
 
 export default function DashboardPage() {
   const [viewMode, setViewMode] = useState<"simple" | "advanced">("simple")
@@ -98,7 +97,6 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen relative">
       <SharedBackground />
-      <TutorialModal />
       <BurgerMenu />
 
       <div className="p-4 pt-20 relative z-10">
