@@ -139,19 +139,24 @@ export default function GroupDetailPage() {
 
   const fetchCurrentUser = async () => {
     try {
-      const response = await fetch("/api/auth/user")
+      const response = await fetch("/api/auth/user", { credentials: 'include' })
       const result = await response.json()
       if (result.success && result.user) {
         setCurrentUserId(result.user.id)
       }
     } catch (error) {
       console.error("Failed to fetch user:", error)
+      // Helpful debug in case of auth/cookie issues
+      try {
+        // eslint-disable-next-line no-console
+        console.debug('Fetch /api/auth/user failed, ensure session cookie is present in the browser (expense_tracker_session)')
+      } catch {}
     }
   }
 
   const fetchUserCategories = async () => {
     try {
-      const response = await fetch("/api/categories?type=expense")
+      const response = await fetch("/api/categories?type=expense", { credentials: 'include' })
       const result = await response.json()
       if (result.success) {
         setUserCategories(result.categories)
@@ -163,7 +168,7 @@ export default function GroupDetailPage() {
 
   const fetchUserUpiIds = async () => {
     try {
-      const response = await fetch("/api/upi")
+      const response = await fetch("/api/upi", { credentials: 'include' })
       const result = await response.json()
       if (result.success) {
         setUserUpiIds(result.upiIds)
@@ -181,9 +186,9 @@ export default function GroupDetailPage() {
   const fetchGroupData = async () => {
     try {
       const [groupRes, membersRes, expensesRes] = await Promise.all([
-        fetch(`/api/groups/${groupId}`),
-        fetch(`/api/groups/${groupId}/members`),
-        fetch(`/api/groups/${groupId}/expenses`)
+        fetch(`/api/groups/${groupId}`, { credentials: 'include' }),
+        fetch(`/api/groups/${groupId}/members`, { credentials: 'include' }),
+        fetch(`/api/groups/${groupId}/expenses`, { credentials: 'include' })
       ])
 
       const groupData = await groupRes.json()
@@ -223,6 +228,7 @@ export default function GroupDetailPage() {
       const response = await fetch(`/api/groups/${groupId}/invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: 'include',
         body: JSON.stringify({ identifier: inviteIdentifier }),
       })
 
@@ -642,7 +648,8 @@ export default function GroupDetailPage() {
     )
   }
 
-  const isAdmin = group.created_by === currentUserId
+  // Determine admin status by checking group creator or membership role
+  const isAdmin = !!members.find(m => m.user_id === currentUserId && m.role === "admin") || group.created_by === currentUserId
 
   return (
     <div className="min-h-screen relative">
@@ -702,7 +709,15 @@ export default function GroupDetailPage() {
               <div className="flex gap-4">
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Members</p>
-                  <p className="text-2xl font-bold">{members.length}</p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-2xl font-bold">{members.length}</p>
+                    {isAdmin && (
+                      <Button size="sm" variant="outline" onClick={() => setInviteDialog(true)}>
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Add Member
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Total Expenses</p>
