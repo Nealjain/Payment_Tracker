@@ -21,8 +21,6 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("signin")
   const [step, setStep] = useState<"email" | "details">("email")
   const [signupStep, setSignupStep] = useState<"email" | "password" | "phone" | "pin" | "username">("email")
-  const [loginMethod, setLoginMethod] = useState<"password" | "pin">("password")
-  
   // Form fields
   const [email, setEmail] = useState("")
   const [identifier, setIdentifier] = useState("") // Can be email or username
@@ -51,6 +49,15 @@ export default function AuthPage() {
           variant: "destructive",
         })
         return
+      }
+      // Populate email/username/phoneNumber from identifier so handleSignIn can use them
+      const trimmed = identifier.trim()
+      if (trimmed.includes("@")) {
+        setEmail(trimmed)
+      } else if (/^\+?\d[\d\s()-]{6,}$/.test(trimmed)) {
+        setPhoneNumber(trimmed)
+      } else {
+        setUsername(trimmed)
       }
       // Just proceed to next step for sign in
       setStep("details")
@@ -109,25 +116,15 @@ export default function AuthPage() {
   }
 
   const handleSignIn = async () => {
-    // Validate based on login method
-    if (loginMethod === "password") {
-      if (!identifier.trim() || !password) {
-        toast({
-          title: "Missing information",
-          description: "Please enter your password",
-          variant: "destructive",
-        })
-        return
-      }
-    } else {
-      if (!identifier.trim() || !pin || pin.length !== PIN_LENGTH) {
-        toast({
-          title: "Missing information",
-          description: "Please enter your 4-digit PIN",
-          variant: "destructive",
-        })
-        return
-      }
+    // Ask the user to provide credentials: try password first, then PIN
+    if (!email.trim() && !username.trim() && !phoneNumber.trim()) {
+      toast({ title: "Missing identifier", description: "Please enter your email, username, or phone", variant: "destructive" })
+      return
+    }
+
+    if (!password && !pin) {
+      toast({ title: "Missing credentials", description: "Please enter your password or 4-digit PIN", variant: "destructive" })
+      return
     }
 
     setIsLoading(true)
@@ -136,36 +133,26 @@ export default function AuthPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          identifier: identifier.trim(),
-          password: loginMethod === "password" ? password : undefined,
-          pin: loginMethod === "pin" ? pin : undefined,
-          loginMethod,
+          email: email.trim() || undefined,
+          username: username.trim() || undefined,
+          phoneNumber: phoneNumber.trim() || undefined,
+          password: password || undefined,
+          pin: pin || undefined,
         }),
       })
 
       const result = await response.json()
 
       if (result.success) {
-        toast({
-          title: "Welcome back!",
-          description: "Successfully signed in",
-        })
+        toast({ title: "Welcome back!", description: "Successfully signed in" })
         router.push("/dashboard")
       } else {
-        toast({
-          title: "Sign in failed",
-          description: result.error || "Invalid credentials",
-          variant: "destructive",
-        })
+        toast({ title: "Sign in failed", description: result.error || "Invalid credentials", variant: "destructive" })
         setPassword("")
         setPin("")
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
@@ -382,10 +369,7 @@ export default function AuthPage() {
   }
 
   const canProceedEmail = activeTab === "signin" ? identifier.trim() && !isLoading : email.trim() && !isLoading
-  const canSignIn =
-    loginMethod === "password"
-      ? password && !isLoading
-      : pin.length === PIN_LENGTH && !isLoading
+  const canSignIn = (password && !isLoading) || (pin.length === PIN_LENGTH && !isLoading)
   const canSignUp =
     password &&
     confirmPassword &&
@@ -485,34 +469,6 @@ export default function AuthPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm">Sign in with:</Label>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant={loginMethod === "password" ? "default" : "outline"}
-                        onClick={() => {
-                          setLoginMethod("password")
-                          setPin("")
-                        }}
-                        className="flex-1"
-                      >
-                        Password
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={loginMethod === "pin" ? "default" : "outline"}
-                        onClick={() => {
-                          setLoginMethod("pin")
-                          setPassword("")
-                        }}
-                        className="flex-1"
-                      >
-                        PIN
-                      </Button>
-                    </div>
-                  </div>
-
-                  {loginMethod === "password" ? (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>Password</Label>
@@ -537,7 +493,7 @@ export default function AuthPage() {
                         className="transition-all duration-200 focus:scale-[1.02]"
                       />
                     </div>
-                  ) : (
+
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>4-Digit PIN</Label>
@@ -562,11 +518,10 @@ export default function AuthPage() {
                         onKeyPress={(e) => e.key === "Enter" && canSignIn && handleSignIn()}
                         maxLength={PIN_LENGTH}
                         disabled={isLoading}
-                        autoFocus
                         className="text-center text-lg tracking-widest transition-all duration-200 focus:scale-[1.02]"
                       />
                     </div>
-                  )}
+                  </div>
 
                   <Button
                     onClick={handleSignIn}
@@ -582,7 +537,7 @@ export default function AuthPage() {
                       onClick={() => router.push("/auth/forgot-pin")}
                       className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      Forgot {loginMethod === "password" ? "Password" : "PIN"}?
+                      Forgot credentials?
                     </Button>
                   </div>
                 </>

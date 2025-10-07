@@ -13,8 +13,6 @@ const requiredEnvVars = [
 const optionalEnvVars = [
   "UPSTASH_REDIS_REST_URL",
   "UPSTASH_REDIS_REST_TOKEN",
-  "GOOGLE_CLIENT_ID",
-  "GOOGLE_CLIENT_SECRET",
   "NEXT_PUBLIC_APP_URL",
 ] as const
 
@@ -49,10 +47,14 @@ export function validateEnvironment() {
   }
 
   // Check if Google OAuth is configured (both or neither)
-  const hasGoogleId = !!process.env.GOOGLE_CLIENT_ID
-  const hasGoogleSecret = !!process.env.GOOGLE_CLIENT_SECRET
-  if (hasGoogleId !== hasGoogleSecret) {
-    warnings.push("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET (both required for Google OAuth)")
+  // Google OAuth is optional; only validate if explicitly enabled
+  const isGoogleEnabled = !!process.env.ENABLE_GOOGLE_OAUTH
+  if (isGoogleEnabled) {
+    const hasGoogleId = !!process.env.GOOGLE_CLIENT_ID
+    const hasGoogleSecret = !!process.env.GOOGLE_CLIENT_SECRET
+    if (hasGoogleId !== hasGoogleSecret) {
+      warnings.push("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET (both required for Google OAuth)")
+    }
   }
 
   // Report results

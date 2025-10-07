@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+        options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/complete-profile`,
         data: {
           username,
           phone_number: phoneNumber,
