@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { authenticateUser } from "@/lib/auth"
-import { createSession } from "@/lib/session"
+import { createSession, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/session"
 import { withRateLimit, validateRequestBody, sanitizeInput } from "@/lib/api-security"
 
 async function handleLogin(request: NextRequest) {
@@ -26,10 +26,17 @@ async function handleLogin(request: NextRequest) {
     const result = await authenticateUser(username, pin)
 
     if (result.success && result.userId) {
-      // Create session
-      await createSession(result.userId)
+      const token = await createSession(result.userId, { setCookie: false })
+      const res = NextResponse.json({ success: true, userId: result.userId })
+      res.cookies.set(SESSION_COOKIE, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: SESSION_MAX_AGE,
+        path: "/",
+      })
 
-      return NextResponse.json({ success: true, userId: result.userId })
+      return res
     } else {
       return NextResponse.json({ success: false, error: result.error }, { status: 401 })
     }
