@@ -1,0 +1,782 @@
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { useToast } from "@/hooks/use-toast"
+import { Eye, EyeOff } from "lucide-react"
+import { PhoneInput } from "react-international-phone"
+import "react-international-phone/style.css"
+import TextType from "@/components/ui/text-type"
+import SharedBackground from "@/components/ui/shared-background"
+
+const PIN_LENGTH = 4
+
+export default function AuthPage() {
+  // Unified flow state
+  const [flowType, setFlowType] = useState<"email" | "signin" | "signup">("email")
+  const [signupStep, setSignupStep] = useState<"password" | "phone" | "pin" | "username">("password")
+  const [loginMethod, setLoginMethod] = useState<"password" | "pin">("password")
+  
+  // Form fields
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [username, setUsername] = useState("")
+  const [phoneNumber, setPhoneNumber] = useState("")
+  const [pin, setPin] = useState("")
+  const [confirmPin, setConfirmPin] = useState("")
+  
+  const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showPin, setShowPin] = useState(false)
+  const [showConfirmPin, setShowConfirmPin] = useState(false)
+  const router = useRouter()
+  const { toast } = useToast()
+
+  const handleEmailCheck = async () => {
+    if (!email.trim()) {
+      toast({ title: "Email required", description: "Please enter your email address", variant: "destructive" })
+      return
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.trim())) {
+      toast({ title: "Invalid email", description: "Please enter a valid email address", variant: "destructive" })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      })
+
+      const result = await response.json()
+
+      if (result.exists) {
+        // Email exists - show sign in flow
+        setFlowType("signin")
+      } else {
+        // New email - show sign up flow
+        setFlowType("signup")
+        setSignupStep("password")
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleBackToEmail = () => {
+    setFlowType("email")
+    setPassword("")
+    setConfirmPassword("")
+    setPin("")
+    setConfirmPin("")
+    setUsername("")
+    setPhoneNumber("")
+    setSignupStep("password")
+  }
+    if (!emailRegex.test(emailTrimmed)) {
+      toast({ title: "Invalid email", description: "Please enter a valid email address", variant: "destructive" })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailTrimmed }),
+      })
+
+      const result = await response.json()
+
+      if (result.exists) {
+        // Email exists -> proceed to sign-in details
+        setStep("details")
+      } else {
+        // Email not registered -> switch to sign up flow with email prefilled
+        setActiveTab("signup")
+        setSignupStep("password")
+        // keep email in state so sign up form is prefilled
+        toast({ title: "Create account", description: "No account found. Proceed to sign up.", variant: "default" })
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSignIn = async () => {
+    // Ask the user to provide credentials: try password first, then PIN
+    if (!email.trim() && !username.trim() && !phoneNumber.trim()) {
+      toast({ title: "Missing identifier", description: "Please enter your email, username, or phone", variant: "destructive" })
+      return
+    }
+
+    if (!password && !pin) {
+      toast({ title: "Missing credentials", description: "Please enter your password or 4-digit PIN", variant: "destructive" })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim() || undefined,
+          username: username.trim() || undefined,
+          phoneNumber: phoneNumber.trim() || undefined,
+          password: password || undefined,
+          pin: pin || undefined,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({ title: "Welcome back!", description: "Successfully signed in" })
+        router.push("/dashboard")
+      } else {
+        toast({ title: "Sign in failed", description: result.error || "Invalid credentials", variant: "destructive" })
+        setPassword("")
+        setPin("")
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+
+
+  const handleSignUp = async () => {
+    // Validate all required fields
+    if (!email.trim() || !password || !confirmPassword || !username.trim() || !phoneNumber.trim() || !pin || !confirmPin) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate password
+    if (password.length < 8) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 8 characters",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (password !== confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please make sure both passwords are the same",
+        variant: "destructive",
+      })
+      setConfirmPassword("")
+      return
+    }
+
+    // Validate phone number (basic check - the component handles formatting)
+    if (phoneNumber.length < 10) {
+      toast({
+        title: "Invalid phone number",
+        description: "Please enter a valid phone number",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate PIN
+    if (pin.length !== PIN_LENGTH) {
+      toast({
+        title: "Invalid PIN",
+        description: "PIN must be exactly 4 digits",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (pin !== confirmPin) {
+      toast({
+        title: "PINs don't match",
+        description: "Please make sure both PINs are the same",
+        variant: "destructive",
+      })
+      setConfirmPin("")
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          username: username.trim(),
+          phoneNumber: phoneNumber.trim(),
+          pin,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "Account created!",
+          description: "You can now sign in",
+        })
+        setActiveTab("signin")
+        setStep("email")
+        // Clear signup fields
+        setPassword("")
+        setConfirmPassword("")
+        setUsername("")
+        setPhoneNumber("")
+        setPin("")
+        setConfirmPin("")
+      } else {
+        toast({
+          title: "Sign up failed",
+          description: result.error || "Failed to create account",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+
+
+  const handleBack = () => {
+    setStep("email")
+    setPassword("")
+    setConfirmPassword("")
+    setPin("")
+    setConfirmPin("")
+  }
+
+  const resetForm = () => {
+    setStep("email")
+    setSignupStep("email")
+    setEmail("")
+    setIdentifier("")
+    setPassword("")
+    setConfirmPassword("")
+    setUsername("")
+    setPhoneNumber("")
+    setPin("")
+    setConfirmPin("")
+  }
+
+  const handleSignupNext = () => {
+    if (signupStep === "email") {
+      if (!email.trim()) {
+        toast({
+          title: "Email required",
+          description: "Please enter your email address",
+          variant: "destructive",
+        })
+        return
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email.trim())) {
+        toast({
+          title: "Invalid email",
+          description: "Please enter a valid email address",
+          variant: "destructive",
+        })
+        return
+      }
+      setSignupStep("password")
+    } else if (signupStep === "password") {
+      if (!password || password.length < 8) {
+        toast({
+          title: "Password too short",
+          description: "Password must be at least 8 characters",
+          variant: "destructive",
+        })
+        return
+      }
+      if (password !== confirmPassword) {
+        toast({
+          title: "Passwords don't match",
+          description: "Please make sure both passwords are the same",
+          variant: "destructive",
+        })
+        return
+      }
+      setSignupStep("phone")
+    } else if (signupStep === "phone") {
+      if (!phoneNumber || phoneNumber.length < 10) {
+        toast({
+          title: "Invalid phone number",
+          description: "Please enter a valid phone number",
+          variant: "destructive",
+        })
+        return
+      }
+      setSignupStep("pin")
+    } else if (signupStep === "pin") {
+      if (pin.length !== PIN_LENGTH) {
+        toast({
+          title: "Invalid PIN",
+          description: "PIN must be exactly 4 digits",
+          variant: "destructive",
+        })
+        return
+      }
+      if (pin !== confirmPin) {
+        toast({
+          title: "PINs don't match",
+          description: "Please make sure both PINs are the same",
+          variant: "destructive",
+        })
+        return
+      }
+      setSignupStep("username")
+    }
+  }
+
+  const handleSignupBack = () => {
+    if (signupStep === "password") setSignupStep("email")
+    else if (signupStep === "phone") setSignupStep("password")
+    else if (signupStep === "pin") setSignupStep("phone")
+    else if (signupStep === "username") setSignupStep("pin")
+  }
+
+  const canProceedEmail = email.trim() && !isLoading
+  const canSignIn = (password && !isLoading) || (pin.length === PIN_LENGTH && !isLoading)
+  const canSignUp =
+    password &&
+    confirmPassword &&
+    username.trim() &&
+    phoneNumber.trim() &&
+    pin.length === PIN_LENGTH &&
+    confirmPin.length === PIN_LENGTH &&
+    password === confirmPassword &&
+    pin === confirmPin &&
+    !isLoading
+
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center p-4 relative">
+      <SharedBackground />
+
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
+
+      <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur-lg relative z-10">
+        <CardHeader className="text-center space-y-3">
+          <CardTitle className="text-3xl font-bold">
+            <TextType
+              text="Welcome to PayDhan"
+              typingSpeed={100}
+              pauseDuration={3000}
+              showCursor={true}
+              cursorCharacter="|"
+              loop={false}
+              className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent"
+            />
+          </CardTitle>
+          <CardDescription className="text-base">Your smart expense management companion</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Unified Email-First Flow */}
+          {flowType === "email" && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="signin-email">Email address</Label>
+                    <Input
+                      id="signin-email"
+                      type="email"
+                      placeholder="your.email@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && handleEmailCheck()}
+                      disabled={isLoading}
+                      autoFocus
+                      className="transition-all duration-200 focus:scale-[1.02]"
+                    />
+                    <p className="text-xs text-muted-foreground">We'll check whether this email is registered and continue accordingly.</p>
+                  </div>
+
+                  <Button
+                    onClick={handleEmailCheck}
+                    className="w-full h-12 text-base font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                    disabled={!canProceedEmail}
+                  >
+                    {isLoading ? "Checking..." : "Continue"}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">Signing in as:</Label>
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <span className="font-medium">{email}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { setStep("email"); setEmail(""); setPassword(""); setPin("") }}
+                        className="h-8 text-xs"
+                      >
+                        Change
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Password</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="h-8 w-8 p-0 hover:bg-muted/50 transition-colors"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && canSignIn && handleSignIn()}
+                        disabled={isLoading}
+                        autoFocus
+                        className="transition-all duration-200 focus:scale-[1.02]"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>4-Digit PIN</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowPin(!showPin)}
+                          className="h-8 w-8 p-0 hover:bg-muted/50 transition-colors"
+                        >
+                          {showPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <Input
+                        type={showPin ? "text" : "password"}
+                        placeholder="Enter your 4-digit PIN"
+                        value={pin}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "").slice(0, PIN_LENGTH)
+                          setPin(value)
+                        }}
+                        onKeyPress={(e) => e.key === "Enter" && canSignIn && handleSignIn()}
+                        maxLength={PIN_LENGTH}
+                        disabled={isLoading}
+                        className="text-center text-lg tracking-widest transition-all duration-200 focus:scale-[1.02]"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleSignIn}
+                    className="w-full h-12 text-base font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                    disabled={!canSignIn}
+                  >
+                    {isLoading ? "Signing in..." : "Sign In"}
+                  </Button>
+
+                  <div className="text-center">
+                    <Button
+                      variant="link"
+                      onClick={() => router.push("/auth/forgot-pin")}
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Forgot credentials?
+                    </Button>
+                  </div>
+                </>
+              )}
+            </TabsContent>
+
+            <TabsContent value="signup" className="space-y-5 animate-fade-in">
+              {/* Progress indicator */}
+              <div className="flex items-center justify-between mb-4">
+                {["email", "password", "phone", "pin", "username"].map((s, i) => (
+                  <div key={s} className="flex items-center flex-1">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                        signupStep === s
+                          ? "bg-primary text-primary-foreground scale-110"
+                          : ["email", "password", "phone", "pin", "username"].indexOf(signupStep) > i
+                          ? "bg-primary/50 text-primary-foreground"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {i + 1}
+                    </div>
+                    {i < 4 && (
+                      <div
+                        className={`h-1 flex-1 mx-1 rounded transition-all ${
+                          ["email", "password", "phone", "pin", "username"].indexOf(signupStep) > i
+                            ? "bg-primary/50"
+                            : "bg-muted"
+                        }`}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {signupStep === "email" && (
+                <>
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-semibold">Step 1: Email Address</h3>
+                    <p className="text-sm text-muted-foreground">Enter your email to get started</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email Address</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="your.email@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && handleSignupNext()}
+                      disabled={isLoading}
+                      autoFocus
+                      className="transition-all duration-200 focus:scale-[1.02]"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleSignupNext}
+                    className="w-full h-12 text-base font-medium"
+                    disabled={!email.trim() || isLoading}
+                  >
+                    Continue
+                  </Button>
+                </>
+              )}
+
+              {signupStep === "password" && (
+                <>
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-semibold">Step 2: Create Password</h3>
+                    <p className="text-sm text-muted-foreground">Choose a strong password</p>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Password</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="h-8 w-8 p-0"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Min 8 characters"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        autoFocus
+                        className="transition-all duration-200 focus:scale-[1.02]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Confirm Password</Label>
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Re-enter password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && handleSignupNext()}
+                        className="transition-all duration-200 focus:scale-[1.02]"
+                      />
+                      {password && confirmPassword && (
+                        <p className={`text-sm ${password === confirmPassword ? "text-green-500" : "text-red-500"}`}>
+                          {password === confirmPassword ? "✓ Passwords match" : "✗ Passwords don't match"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleSignupBack} className="flex-1">
+                      Back
+                    </Button>
+                    <Button onClick={handleSignupNext} className="flex-1" disabled={!password || !confirmPassword}>
+                      Continue
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {signupStep === "phone" && (
+                <>
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-semibold">Step 3: Phone Number</h3>
+                    <p className="text-sm text-muted-foreground">We'll use this for account security</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-phone">Phone Number</Label>
+                    <PhoneInput
+                      defaultCountry="us"
+                      value={phoneNumber}
+                      onChange={(phone) => setPhoneNumber(phone)}
+                      disabled={isLoading}
+                      inputClassName="w-full"
+                      className="phone-input-custom"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Select your country and enter your phone number
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleSignupBack} className="flex-1">
+                      Back
+                    </Button>
+                    <Button onClick={handleSignupNext} className="flex-1" disabled={!phoneNumber || phoneNumber.length < 10}>
+                      Continue
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {signupStep === "pin" && (
+                <>
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-semibold">Step 4: Create PIN</h3>
+                    <p className="text-sm text-muted-foreground">4-digit PIN for quick access</p>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>4-Digit PIN</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowPin(!showPin)}
+                          className="h-8 w-8 p-0"
+                        >
+                          {showPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <Input
+                        type={showPin ? "text" : "password"}
+                        placeholder="Enter 4 digits"
+                        value={pin}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "").slice(0, PIN_LENGTH)
+                          setPin(value)
+                        }}
+                        maxLength={PIN_LENGTH}
+                        autoFocus
+                        className="text-center text-2xl tracking-widest"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Confirm PIN</Label>
+                      <Input
+                        type={showPin ? "text" : "password"}
+                        placeholder="Re-enter PIN"
+                        value={confirmPin}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "").slice(0, PIN_LENGTH)
+                          setConfirmPin(value)
+                        }}
+                        maxLength={PIN_LENGTH}
+                        onKeyPress={(e) => e.key === "Enter" && handleSignupNext()}
+                        className="text-center text-2xl tracking-widest"
+                      />
+                      {pin && confirmPin && (
+                        <p className={`text-sm text-center ${pin === confirmPin ? "text-green-500" : "text-red-500"}`}>
+                          {pin === confirmPin ? "✓ PINs match" : "✗ PINs don't match"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleSignupBack} className="flex-1">
+                      Back
+                    </Button>
+                    <Button onClick={handleSignupNext} className="flex-1" disabled={pin.length !== PIN_LENGTH || confirmPin.length !== PIN_LENGTH}>
+                      Continue
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {signupStep === "username" && (
+                <>
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-semibold">Step 5: Choose Username</h3>
+                    <p className="text-sm text-muted-foreground">Pick a unique username</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-username">Username</Label>
+                    <Input
+                      id="signup-username"
+                      placeholder="Choose a username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && canSignUp && handleSignUp()}
+                      autoFocus
+                      className="transition-all duration-200 focus:scale-[1.02]"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Letters, numbers, and underscores only
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleSignupBack} className="flex-1">
+                      Back
+                    </Button>
+                    <Button onClick={handleSignUp} className="flex-1" disabled={!canSignUp}>
+                      {isLoading ? "Creating account..." : "Create Account"}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
