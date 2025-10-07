@@ -73,6 +73,13 @@ export default function PaymentsPage() {
           description: "Payment added successfully",
         })
         setShowForm(false)
+        
+        // Add the new payment to the list immediately (optimistic update)
+        if (result.data?.payment) {
+          setPayments((prev) => [result.data.payment, ...prev])
+        }
+        
+        // Also fetch from server to ensure sync
         fetchPayments()
       } else {
         console.error("❌ Failed to add payment:", result.error)

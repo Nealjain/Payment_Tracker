@@ -228,9 +228,16 @@ export default function AuthPage() {
       const result = await response.json()
 
       if (result.success) {
-        toast({ title: "Account created!", description: "Redirecting to dashboard..." })
-        // Session cookie is created server-side; redirect to dashboard
-        setTimeout(() => router.push("/dashboard"), 150)
+        // Store user ID in localStorage
+        if (result.data?.userId) {
+          localStorage.setItem("userId", result.data.userId)
+        }
+        
+        toast({ title: "Account created!", description: "Let's set up your profile..." })
+        // Redirect to onboarding for first-time setup
+        setTimeout(() => {
+          window.location.href = "/onboarding"
+        }, 500)
       } else {
         toast({ title: "Sign up failed", description: result.error || "Failed to create account", variant: "destructive" })
       }
