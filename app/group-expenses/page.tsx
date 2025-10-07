@@ -98,6 +98,7 @@ export default function GroupExpensesPage() {
       })
 
       const result = await response.json()
+      console.log("👥 Create group response:", result)
 
       if (result.success) {
         toast({
@@ -109,6 +110,7 @@ export default function GroupExpensesPage() {
         setGroupDescription("")
         fetchGroups()
       } else {
+        console.error("❌ Failed to create group:", result.error)
         toast({
           title: "Error",
           description: result.error || "Failed to create group",
@@ -116,6 +118,7 @@ export default function GroupExpensesPage() {
         })
       }
     } catch (error) {
+      console.error("❌ Create group error:", error)
       toast({
         title: "Error",
         description: "Something went wrong",
