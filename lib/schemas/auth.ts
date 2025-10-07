@@ -17,19 +17,19 @@ export type SignupInput = z.infer<typeof signupSchema>
 
 // Signin schema
 export const signinSchema = z.object({
-  identifier: z.string().min(1, "Email or username is required"),
-  password: z.string().optional(),
-  pin: z.string().optional(),
-  loginMethod: z.enum(["password", "pin"]),
+  // Allow either email, username, or phoneNumber as identifier
+  email: z.string().email("Invalid email address").optional(),
+  username: z.string().min(1).optional(),
+  phoneNumber: z.string().min(6).optional(),
+  // Credentials
+  password: z.string().min(1).optional(),
+  pin: z.string().regex(/^\d{4}$/, "PIN must be exactly 4 digits").optional(),
 }).refine(
-  (data) => {
-    if (data.loginMethod === "password") return !!data.password
-    if (data.loginMethod === "pin") return !!data.pin && /^\d{4}$/.test(data.pin)
-    return false
-  },
-  {
-    message: "Invalid credentials for selected login method",
-  }
+  (data) => !!(data.email || data.username || data.phoneNumber),
+  { message: "An identifier is required (email, username or phoneNumber)" }
+).refine(
+  (data) => !!(data.password || data.pin),
+  { message: "Either password or 4-digit PIN is required" }
 )
 
 export type SigninInput = z.infer<typeof signinSchema>

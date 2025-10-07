@@ -73,18 +73,14 @@ export default function AuthPage() {
       console.log("📧 Email check result:", result)
 
       if (result.success) {
-        const exists = result.data?.exists || false
+        const exists = result.exists ?? result.data?.exists ?? false
         if (exists) {
           // Email exists - show sign in
-          console.log("✅ Email exists - showing signin form")
           setFlowType("signin")
-          console.log("🔄 Flow type set to:", "signin")
         } else {
           // New email - show sign up
-          console.log("ℹ️ New email - showing signup form")
           setFlowType("signup")
           setSignupStep("password")
-          console.log("🔄 Flow type set to:", "signup")
         }
       } else {
         console.error("❌ Email check failed:", result.error)
@@ -147,10 +143,11 @@ export default function AuthPage() {
       if (result.success) {
         toast({ title: "Welcome back!", description: "Successfully signed in" })
         console.log("🚀 Redirecting to dashboard...")
-        // Small delay to ensure cookie is set
+        // Longer delay to ensure cookie is set
         setTimeout(() => {
-          router.push("/dashboard")
-        }, 100)
+          console.log("⏰ Delay complete, attempting redirect...")
+          window.location.href = "/dashboard"
+        }, 500)
       } else {
         toast({ title: "Sign in failed", description: result.error || "Invalid credentials", variant: "destructive" })
         setPassword("")
@@ -225,15 +222,9 @@ export default function AuthPage() {
       const result = await response.json()
 
       if (result.success) {
-        toast({ title: "Account created!", description: "You can now sign in" })
-        // Reset to sign in
-        setFlowType("signin")
-        setPassword("")
-        setConfirmPassword("")
-        setUsername("")
-        setPhoneNumber("")
-        setPin("")
-        setConfirmPin("")
+        toast({ title: "Account created!", description: "Redirecting to dashboard..." })
+        // Session cookie is created server-side; redirect to dashboard
+        setTimeout(() => router.push("/dashboard"), 150)
       } else {
         toast({ title: "Sign up failed", description: result.error || "Failed to create account", variant: "destructive" })
       }

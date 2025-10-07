@@ -3,26 +3,19 @@ import { createClient } from "@/lib/supabase/server"
 import { createSession } from "@/lib/session"
 import { verifyPin } from "@/lib/auth"
 import { successResponse, errorResponse, validationErrorResponse, unauthorizedResponse, serverErrorResponse } from "@/lib/api-response"
+import { signinSchema } from "@/lib/schemas/auth"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log("🔐 Signin attempt:", { 
-      hasEmail: !!body.email, 
-      hasUsername: !!body.username, 
-      hasPhoneNumber: !!body.phoneNumber,
-      hasPassword: !!body.password,
-      hasPin: !!body.pin 
-    })
 
-    // Accept either email/username/phoneNumber and either password or pin
-    const { email, username, phoneNumber, password, pin } = body as {
-      email?: string
-      username?: string
-      phoneNumber?: string
-      password?: string
-      pin?: string
+    // Validate input shape
+    const validation = signinSchema.safeParse(body)
+    if (!validation.success) {
+      return validationErrorResponse(validation.error)
     }
+
+    const { email, username, phoneNumber, password, pin } = validation.data
 
     const supabase = await createClient()
 
@@ -37,11 +30,8 @@ export async function POST(request: NextRequest) {
     const { data: user, error: userError } = await userQuery.single()
 
     if (userError || !user) {
-      console.log("❌ User not found:", userError?.message)
       return unauthorizedResponse("User not found")
     }
-
-    console.log("✅ User found:", { id: user.id, email: user.email, username: user.username })
 
     // If password provided, authenticate via Supabase Auth using email
     if (password) {
@@ -53,26 +43,21 @@ export async function POST(request: NextRequest) {
       })
 
       if (authError || !authData.user) {
-        console.log("❌ Password authentication failed:", authError?.message)
         return unauthorizedResponse("Invalid password")
       }
 
-      console.log("✅ Password authentication successful")
       await createSession(user.id)
       return successResponse({ userId: user.id })
     }
 
     // If PIN provided, verify locally
     if (pin) {
-      console.log("🔢 Verifying PIN...")
       const isValidPin = await verifyPin(pin, user.pin_hash)
       if (!isValidPin) {
-        console.log("❌ PIN verification failed")
         return unauthorizedResponse("Invalid PIN")
       }
-      console.log("✅ PIN verification successful")
-      const sessionToken = await createSession(user.id)
-      console.log("🍪 Session created, cookie should be set")
+
+      await createSession(user.id)
       return successResponse({ userId: user.id })
     }
 
