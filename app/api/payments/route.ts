@@ -6,15 +6,18 @@ import { successResponse, errorResponse, validationErrorResponse, serverErrorRes
 
 async function handleGetPayments(request: NextRequest, userId: string) {
   try {
+    console.log("📊 Fetching payments for user:", userId)
     const result = await getPayments(userId)
+    console.log("📊 Get payments result:", { success: result.success, count: result.payments?.length })
 
     if (result.success) {
       return successResponse({ payments: result.payments })
     } else {
+      console.error("❌ Failed to get payments:", result.error)
       return errorResponse(result.error || "Failed to fetch payments")
     }
   } catch (error) {
-    console.error("Get payments error:", error)
+    console.error("❌ Get payments error:", error)
     return serverErrorResponse("Internal server error")
   }
 }
