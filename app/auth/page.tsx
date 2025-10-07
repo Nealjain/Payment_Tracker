@@ -112,17 +112,21 @@ export default function AuthPage() {
 
     setIsLoading(true)
     try {
+      const payload = {
+        email: email.trim(),
+        password: loginMethod === "password" ? password : undefined,
+        pin: loginMethod === "pin" ? pin : undefined,
+      }
+      console.log("🔐 Sending signin request:", { ...payload, password: payload.password ? "***" : undefined, pin: payload.pin ? "***" : undefined })
+      
       const response = await fetch("/api/auth/signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim(),
-          password: loginMethod === "password" ? password : undefined,
-          pin: loginMethod === "pin" ? pin : undefined,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const result = await response.json()
+      console.log("📥 Signin response:", { success: result.success, error: result.error })
 
       if (result.success) {
         toast({ title: "Welcome back!", description: "Successfully signed in" })
