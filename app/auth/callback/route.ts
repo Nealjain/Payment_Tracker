@@ -26,52 +26,27 @@ export async function GET(request: NextRequest) {
         .single()
 
       if (!existingUser) {
-        // New user - create minimal record and redirect to complete profile
-        // DO NOT set username/phone/pin - force user to complete profile
-        const { data: newUser, error: createError } = await supabase
-          .from("users")
-          .insert({
-            email: session.user.email,
-            username: `temp_${Date.now()}`, // Temporary username
-            pin_hash: "temp", // Temporary, will be updated in complete profile
-            provider: "google",
-          })
-          .select()
-          .single()
-
-        if (createError) {
-          console.error("Error creating user:", createError)
-          // User might already exist, try to fetch again
-          const { data: retryUser } = await supabase
-            .from("users")
-            .select("id")
-            .eq("email", session.user.email)
-            .single()
-
-          if (retryUser) {
-            const cookieStore = await cookies()
-            cookieStore.set("session", retryUser.id, {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === "production",
-              sameSite: "lax",
-              maxAge: 60 * 60 * 24 * 7,
-            })
-            return NextResponse.redirect(`${requestUrl.origin}/auth/complete-profile`)
-          }
-
-          return NextResponse.redirect(`${requestUrl.origin}/auth?error=user_creation_failed`)
-        }
-
-        // Set session cookie
+        // New user - DO NOT create account yet
+        // Store email in a temporary session and redirect to complete profile
+        // The complete-profile page will create the actual user record
         const cookieStore = await cookies()
-        cookieStore.set("session", newUser.id, {
+        
+        // Store pending OAuth data temporarily (expires in 10 minutes)
+        cookieStore.set("pending_oauth_email", session.user.email!, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
-          maxAge: 60 * 60 * 24 * 7, // 7 days
+          maxAge: 60 * 10, // 10 minutes to complete profile
+        })
+        
+        cookieStore.set("pending_oauth_provider", "google", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 60 * 10,
         })
 
-        // Redirect to complete profile
+        // Redirect to complete profile WITHOUT creating user yet
         return NextResponse.redirect(`${requestUrl.origin}/auth/complete-profile`)
       } else {
         // User exists - update provider to include google if not already

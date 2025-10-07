@@ -1,15 +1,21 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createSession } from "@/lib/session"
 import { verifyPin } from "@/lib/auth"
+import { signinSchema } from "@/lib/schemas/auth"
+import { successResponse, errorResponse, validationErrorResponse, unauthorizedResponse, serverErrorResponse } from "@/lib/api-response"
 
 export async function POST(request: NextRequest) {
   try {
-    const { identifier, password, pin, loginMethod } = await request.json()
+    const body = await request.json()
 
-    if (!identifier) {
-      return NextResponse.json({ success: false, error: "Email or username is required" }, { status: 400 })
+    // Validate with Zod
+    const validation = signinSchema.safeParse(body)
+    if (!validation.success) {
+      return validationErrorResponse(validation.error)
     }
+
+    const { identifier, password, pin, loginMethod } = validation.data
 
     const supabase = await createClient()
 
@@ -24,56 +30,40 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Invalid email/username or credentials" },
-        { status: 401 }
-      )
+      return unauthorizedResponse("Invalid email/username or credentials")
     }
 
     if (loginMethod === "password") {
       // Password-based login
-      if (!password) {
-        return NextResponse.json({ success: false, error: "Password is required" }, { status: 400 })
-      }
-
       // Authenticate with Supabase Auth using email
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: user.email,
-        password,
+        password: password!,
       })
 
       if (authError || !authData.user) {
-        return NextResponse.json({ success: false, error: "Invalid password" }, { status: 401 })
+        return unauthorizedResponse("Invalid password")
       }
 
       // Create session
       await createSession(user.id)
 
-      return NextResponse.json({ success: true, userId: user.id })
+      return successResponse({ userId: user.id })
     } else {
       // PIN-based login
-      if (!pin) {
-        return NextResponse.json({ success: false, error: "PIN is required" }, { status: 400 })
-      }
-
-      // Validate PIN is 4 digits
-      if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-        return NextResponse.json({ success: false, error: "PIN must be exactly 4 digits" }, { status: 400 })
-      }
-
       // Verify PIN
-      const isValidPin = await verifyPin(pin, user.pin_hash)
+      const isValidPin = await verifyPin(pin!, user.pin_hash)
       if (!isValidPin) {
-        return NextResponse.json({ success: false, error: "Invalid PIN" }, { status: 401 })
+        return unauthorizedResponse("Invalid PIN")
       }
 
       // PIN is valid - create session
       await createSession(user.id)
 
-      return NextResponse.json({ success: true, userId: user.id })
+      return successResponse({ userId: user.id })
     }
   } catch (error) {
     console.error("Signin error:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    return serverErrorResponse("Internal server error")
   }
 }

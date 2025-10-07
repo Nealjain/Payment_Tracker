@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { cookies } from "next/headers"
+import jwt from "jsonwebtoken"
 
 export interface SessionData {
   userId: string
@@ -9,6 +10,7 @@ export interface SessionData {
 
 const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 const SESSION_COOKIE_NAME = "expense_tracker_session"
+const JWT_SECRET = process.env.SESSION_SECRET || "your-secret-key-change-in-production"
 
 export async function createSession(userId: string): Promise<string> {
   const sessionData: SessionData = {
@@ -17,7 +19,10 @@ export async function createSession(userId: string): Promise<string> {
     expiresAt: Date.now() + SESSION_DURATION,
   }
 
-  const sessionToken = Buffer.from(JSON.stringify(sessionData)).toString("base64")
+  // Sign JWT token
+  const sessionToken = jwt.sign(sessionData, JWT_SECRET, {
+    expiresIn: "24h",
+  })
 
   const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
@@ -40,7 +45,8 @@ export async function getSession(): Promise<string | null> {
       return null
     }
 
-    const sessionData: SessionData = JSON.parse(Buffer.from(sessionToken, "base64").toString())
+    // Verify JWT token
+    const sessionData = jwt.verify(sessionToken, JWT_SECRET) as SessionData
 
     if (Date.now() > sessionData.expiresAt) {
       await clearSession()
@@ -63,7 +69,8 @@ export async function getSessionData(): Promise<SessionData | null> {
       return null
     }
 
-    const sessionData: SessionData = JSON.parse(Buffer.from(sessionToken, "base64").toString())
+    // Verify JWT token
+    const sessionData = jwt.verify(sessionToken, JWT_SECRET) as SessionData
 
     if (Date.now() > sessionData.expiresAt) {
       await clearSession()
@@ -89,7 +96,6 @@ export async function validateSession(): Promise<{ valid: boolean; userId?: stri
     return { valid: false, error: "No active session" }
   }
 
-  // Verify user still exists in database
   try {
     const supabase = await createClient()
     const { data, error } = await supabase.from("users").select("id").eq("id", userId).single()

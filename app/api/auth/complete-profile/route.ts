@@ -1,101 +1,89 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createSession } from "@/lib/session"
 import { hashPin } from "@/lib/auth"
-import { getSession } from "@/lib/session"
+import { completeProfileSchema } from "@/lib/schemas/auth"
+import { successResponse, errorResponse, validationErrorResponse, unauthorizedResponse, serverErrorResponse } from "@/lib/api-response"
+import { cookies } from "next/headers"
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, phoneNumber, pin } = await request.json()
+    const body = await request.json()
 
-    // Validate all required fields
-    if (!username || !phoneNumber || !pin) {
-      return NextResponse.json({ success: false, error: "All fields are required" }, { status: 400 })
+    // Validate with Zod
+    const validation = completeProfileSchema.safeParse(body)
+    if (!validation.success) {
+      return validationErrorResponse(validation.error)
     }
 
-    // Validate PIN is 4 digits
-    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-      return NextResponse.json({ success: false, error: "PIN must be exactly 4 digits" }, { status: 400 })
-    }
+    const { username, phoneNumber, pin } = validation.data
 
-    // Validate phone number format
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/
-    if (!phoneRegex.test(phoneNumber)) {
-      return NextResponse.json({ success: false, error: "Invalid phone number format" }, { status: 400 })
-    }
+    // Get pending OAuth data from cookies
+    const cookieStore = await cookies()
+    const pendingEmail = cookieStore.get("pending_oauth_email")?.value
+    const pendingProvider = cookieStore.get("pending_oauth_provider")?.value
 
-    // Get current user from session
-    const session = await getSession()
-    if (!session) {
-      return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 })
+    if (!pendingEmail || !pendingProvider) {
+      return unauthorizedResponse("No pending OAuth session found. Please sign in again.")
     }
 
     const supabase = await createClient()
 
-    // Get user's email from Supabase Auth
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser()
-
-    if (!authUser) {
-      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 })
-    }
-
-    // Check if username or phone already exists (for other users)
+    // Check if username or phone already exists
     const { data: existingUser } = await supabase
       .from("users")
-      .select("id, username, phone_number")
+      .select("username, phone_number")
       .or(`username.eq.${username},phone_number.eq.${phoneNumber}`)
-      .neq("id", session.userId)
       .single()
 
     if (existingUser) {
       if (existingUser.username === username) {
-        return NextResponse.json({ success: false, error: "Username already exists" }, { status: 400 })
+        return errorResponse("Username already exists", 400, "USERNAME_EXISTS")
       }
       if (existingUser.phone_number === phoneNumber) {
-        return NextResponse.json({ success: false, error: "Phone number already exists" }, { status: 400 })
+        return errorResponse("Phone number already exists", 400, "PHONE_EXISTS")
       }
     }
 
     // Hash the PIN
     const pinHash = await hashPin(pin)
 
-    // Check if user record exists
-    const { data: userRecord } = await supabase.from("users").select("id").eq("id", session.userId).single()
-
-    if (userRecord) {
-      // Update existing user record
-      const { error: updateError } = await supabase
-        .from("users")
-        .update({
-          username,
-          phone_number: phoneNumber,
-          pin_hash: pinHash,
-        })
-        .eq("id", session.userId)
-
-      if (updateError) {
-        return NextResponse.json({ success: false, error: updateError.message }, { status: 500 })
-      }
-    } else {
-      // Create new user record
-      const { error: insertError } = await supabase.from("users").insert({
-        id: session.userId,
-        username,
-        email: authUser.email,
-        phone_number: phoneNumber,
-        pin_hash: pinHash,
-        provider: "google",
-      })
-
-      if (insertError) {
-        return NextResponse.json({ success: false, error: insertError.message }, { status: 500 })
-      }
+    // Get current auth user
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    
+    if (!authUser || authUser.email !== pendingEmail) {
+      return unauthorizedResponse("Authentication mismatch. Please sign in again.")
     }
 
-    return NextResponse.json({ success: true })
+    // Create user record in users table
+    const { data: newUser, error: dbError } = await supabase
+      .from("users")
+      .insert({
+        id: authUser.id,
+        email: pendingEmail,
+        username,
+        phone_number: phoneNumber,
+        pin_hash: pinHash,
+        provider: pendingProvider,
+      })
+      .select()
+      .single()
+
+    if (dbError) {
+      console.error("Database insert error:", dbError)
+      return serverErrorResponse(`Failed to create profile: ${dbError.message}`)
+    }
+
+    // Clear pending OAuth cookies
+    cookieStore.delete("pending_oauth_email")
+    cookieStore.delete("pending_oauth_provider")
+
+    // Create session
+    await createSession(newUser.id)
+
+    return successResponse({ userId: newUser.id }, 201)
   } catch (error) {
     console.error("Complete profile error:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    return serverErrorResponse("Internal server error")
   }
 }

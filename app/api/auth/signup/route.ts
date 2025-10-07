@@ -1,31 +1,21 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createSession } from "@/lib/session"
 import { hashPin } from "@/lib/auth"
+import { signupSchema } from "@/lib/schemas/auth"
+import { successResponse, errorResponse, validationErrorResponse, rateLimitResponse, serverErrorResponse } from "@/lib/api-response"
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, username, phoneNumber, pin } = await request.json()
+    const body = await request.json()
 
-    // Validate all required fields
-    if (!email || !password || !username || !phoneNumber || !pin) {
-      return NextResponse.json({ success: false, error: "All fields are required" }, { status: 400 })
+    // Validate with Zod
+    const validation = signupSchema.safeParse(body)
+    if (!validation.success) {
+      return validationErrorResponse(validation.error)
     }
 
-    // Validate password
-    if (password.length < 8) {
-      return NextResponse.json({ success: false, error: "Password must be at least 8 characters" }, { status: 400 })
-    }
-
-    // Validate PIN is 4 digits
-    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-      return NextResponse.json({ success: false, error: "PIN must be exactly 4 digits" }, { status: 400 })
-    }
-
-    // Validate phone number (basic check - component handles formatting)
-    if (phoneNumber.length < 10) {
-      return NextResponse.json({ success: false, error: "Invalid phone number" }, { status: 400 })
-    }
+    const { email, password, username, phoneNumber, pin } = validation.data
 
     const supabase = await createClient()
 
@@ -38,13 +28,13 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       if (existingUser.email === email) {
-        return NextResponse.json({ success: false, error: "Email already exists" }, { status: 400 })
+        return errorResponse("Email already exists", 400, "EMAIL_EXISTS")
       }
       if (existingUser.username === username) {
-        return NextResponse.json({ success: false, error: "Username already exists" }, { status: 400 })
+        return errorResponse("Username already exists", 400, "USERNAME_EXISTS")
       }
       if (existingUser.phone_number === phoneNumber) {
-        return NextResponse.json({ success: false, error: "Phone number already exists" }, { status: 400 })
+        return errorResponse("Phone number already exists", 400, "PHONE_EXISTS")
       }
     }
 
@@ -67,16 +57,13 @@ export async function POST(request: NextRequest) {
     if (authError) {
       // Handle rate limit error specifically
       if (authError.message.includes("For security purposes")) {
-        return NextResponse.json(
-          { success: false, error: "Please wait a moment before trying again" },
-          { status: 429 }
-        )
+        return rateLimitResponse("Please wait a moment before trying again")
       }
-      return NextResponse.json({ success: false, error: authError.message }, { status: 400 })
+      return errorResponse(authError.message, 400, "AUTH_ERROR")
     }
 
     if (!authData.user) {
-      return NextResponse.json({ success: false, error: "Failed to create user" }, { status: 500 })
+      return serverErrorResponse("Failed to create user")
     }
 
     // Create user record in users table
@@ -94,18 +81,15 @@ export async function POST(request: NextRequest) {
       console.error("Database insert error:", dbError)
       // If user was created in Auth but failed in DB, we should clean up
       // But for now, just return the error
-      return NextResponse.json(
-        { success: false, error: `Account created but profile setup failed: ${dbError.message}` },
-        { status: 500 }
-      )
+      return serverErrorResponse(`Account created but profile setup failed: ${dbError.message}`)
     }
 
     // Create session
     await createSession(authData.user.id)
 
-    return NextResponse.json({ success: true, userId: authData.user.id })
+    return successResponse({ userId: authData.user.id }, 201)
   } catch (error) {
     console.error("Signup error:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    return serverErrorResponse("Internal server error")
   }
 }

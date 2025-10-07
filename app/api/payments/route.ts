@@ -1,19 +1,21 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest } from "next/server"
 import { createPayment, getPayments } from "@/lib/payments"
-import { withAuth, withRateLimit, validateRequestBody, sanitizeInput } from "@/lib/api-security"
+import { withAuth, withRateLimit } from "@/lib/api-security"
+import { paymentSchema } from "@/lib/schemas/payment"
+import { successResponse, errorResponse, validationErrorResponse, serverErrorResponse } from "@/lib/api-response"
 
 async function handleGetPayments(request: NextRequest, userId: string) {
   try {
     const result = await getPayments(userId)
 
     if (result.success) {
-      return NextResponse.json({ success: true, payments: result.payments })
+      return successResponse({ payments: result.payments })
     } else {
-      return NextResponse.json({ success: false, error: result.error }, { status: 400 })
+      return errorResponse(result.error || "Failed to fetch payments")
     }
   } catch (error) {
     console.error("Get payments error:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    return serverErrorResponse("Internal server error")
   }
 }
 
@@ -21,55 +23,34 @@ async function handleCreatePayment(request: NextRequest, userId: string) {
   try {
     const body = await request.json()
 
-    // Validate request body
-    const validation = validateRequestBody(body, ["amount", "type", "direction", "date"])
-    if (!validation.valid) {
-      return NextResponse.json({ success: false, error: validation.error }, { status: 400 })
+    // Validate with Zod
+    const validation = paymentSchema.safeParse(body)
+    if (!validation.success) {
+      return validationErrorResponse(validation.error)
     }
 
-    // Sanitize and validate inputs
-    const amount = Number.parseFloat(body.amount)
-    const type = sanitizeInput(body.type, 10)
-    const direction = sanitizeInput(body.direction, 10)
-    const description = sanitizeInput(body.description || "", 500)
-    const category = sanitizeInput(body.category || "", 100)
-    const date = sanitizeInput(body.date, 10)
-
-    if (isNaN(amount) || amount <= 0) {
-      return NextResponse.json({ success: false, error: "Amount must be a positive number" }, { status: 400 })
-    }
-
-    if (!["income", "expense"].includes(type)) {
-      return NextResponse.json({ success: false, error: "Invalid payment type" }, { status: 400 })
-    }
-
-    if (!["in", "out"].includes(direction)) {
-      return NextResponse.json({ success: false, error: "Invalid payment direction" }, { status: 400 })
-    }
-
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return NextResponse.json({ success: false, error: "Invalid date format" }, { status: 400 })
-    }
+    const { amount, type, description, category, date, paymentMethod } = validation.data
 
     const paymentData = {
       amount,
-      type: type as "income" | "expense",
-      direction: direction as "in" | "out",
-      description: description || undefined,
-      category: category || undefined,
+      type,
+      direction: type === "income" ? ("in" as const) : ("out" as const),
+      description,
+      category,
       date,
+      payment_method: paymentMethod,
     }
 
     const result = await createPayment(userId, paymentData)
 
     if (result.success) {
-      return NextResponse.json({ success: true, payment: result.payment })
+      return successResponse({ payment: result.payment }, 201)
     } else {
-      return NextResponse.json({ success: false, error: result.error }, { status: 400 })
+      return errorResponse(result.error || "Failed to create payment")
     }
   } catch (error) {
     console.error("Create payment error:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    return serverErrorResponse("Internal server error")
   }
 }
 

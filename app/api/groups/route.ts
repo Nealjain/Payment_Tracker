@@ -1,13 +1,15 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getSession } from "@/lib/session"
+import { createGroupSchema } from "@/lib/schemas/group"
+import { successResponse, errorResponse, validationErrorResponse, unauthorizedResponse, serverErrorResponse } from "@/lib/api-response"
 
 // GET - Fetch all groups for user
 export async function GET(request: NextRequest) {
   try {
     const userId = await getSession()
     if (!userId) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+      return unauthorizedResponse()
     }
 
     const supabase = await createClient()
@@ -20,13 +22,13 @@ export async function GET(request: NextRequest) {
 
     if (memberError) {
       console.error("Error fetching memberships:", memberError)
-      return NextResponse.json({ success: false, error: "Failed to fetch groups" }, { status: 500 })
+      return serverErrorResponse("Failed to fetch groups")
     }
 
     const groupIds = memberships.map(m => m.group_id)
 
     if (groupIds.length === 0) {
-      return NextResponse.json({ success: true, groups: [] })
+      return successResponse({ groups: [] })
     }
 
     // Get group details
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     if (groupsError) {
       console.error("Error fetching groups:", groupsError)
-      return NextResponse.json({ success: false, error: "Failed to fetch groups" }, { status: 500 })
+      return serverErrorResponse("Failed to fetch groups")
     }
 
     // Get member counts and total expenses for each group
@@ -64,10 +66,10 @@ export async function GET(request: NextRequest) {
       })
     )
 
-    return NextResponse.json({ success: true, groups: groupsWithStats })
+    return successResponse({ groups: groupsWithStats })
   } catch (error) {
     console.error("Error in groups GET:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    return serverErrorResponse("Internal server error")
   }
 }
 
@@ -76,14 +78,18 @@ export async function POST(request: NextRequest) {
   try {
     const userId = await getSession()
     if (!userId) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+      return unauthorizedResponse()
     }
 
-    const { name, description } = await request.json()
+    const body = await request.json()
 
-    if (!name?.trim()) {
-      return NextResponse.json({ success: false, error: "Group name is required" }, { status: 400 })
+    // Validate with Zod
+    const validation = createGroupSchema.safeParse(body)
+    if (!validation.success) {
+      return validationErrorResponse(validation.error)
     }
+
+    const { name, description, currency } = validation.data
 
     const supabase = await createClient()
 
@@ -91,8 +97,9 @@ export async function POST(request: NextRequest) {
     const { data: group, error: groupError } = await supabase
       .from("groups")
       .insert({
-        name: name.trim(),
-        description: description?.trim() || null,
+        name,
+        description: description || null,
+        currency: currency || "USD",
         created_by: userId,
       })
       .select()
@@ -100,7 +107,7 @@ export async function POST(request: NextRequest) {
 
     if (groupError) {
       console.error("Error creating group:", groupError)
-      return NextResponse.json({ success: false, error: "Failed to create group" }, { status: 500 })
+      return serverErrorResponse("Failed to create group")
     }
 
     // Add creator as admin member
@@ -116,12 +123,12 @@ export async function POST(request: NextRequest) {
       console.error("Error adding member:", memberError)
       // Rollback: delete the group
       await supabase.from("groups").delete().eq("id", group.id)
-      return NextResponse.json({ success: false, error: "Failed to create group" }, { status: 500 })
+      return serverErrorResponse("Failed to create group")
     }
 
-    return NextResponse.json({ success: true, group })
+    return successResponse({ group }, 201)
   } catch (error) {
     console.error("Error in groups POST:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    return serverErrorResponse("Internal server error")
   }
 }
