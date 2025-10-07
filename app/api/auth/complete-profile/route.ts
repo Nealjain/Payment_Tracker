@@ -18,11 +18,15 @@ export async function POST(request: NextRequest) {
 
     const { username, phoneNumber, pin } = validation.data
 
+    console.log("[Complete Profile] Received data:", { username, phoneNumber: phoneNumber.substring(0, 5) + "***", pinLength: pin.length })
+
     // Get pending OAuth data from cookies
     const cookieStore = await cookies()
     const pendingEmail = cookieStore.get("pending_oauth_email")?.value
     const pendingProvider = cookieStore.get("pending_oauth_provider")?.value
     const pendingUserId = cookieStore.get("pending_oauth_user_id")?.value
+
+    console.log("[Complete Profile] Pending OAuth:", { email: pendingEmail, provider: pendingProvider, hasUserId: !!pendingUserId })
 
     if (!pendingEmail || !pendingProvider || !pendingUserId) {
       return unauthorizedResponse("No pending OAuth session found. Please sign in again.")
@@ -50,6 +54,14 @@ export async function POST(request: NextRequest) {
     const pinHash = await hashPin(pin)
 
     // Create user record in users table using the stored user ID
+    console.log("[Complete Profile] Creating user with:", { 
+      id: pendingUserId, 
+      email: pendingEmail, 
+      username, 
+      phone_number: phoneNumber,
+      provider: pendingProvider 
+    })
+
     const { data: newUser, error: dbError } = await supabase
       .from("users")
       .insert({
@@ -64,9 +76,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (dbError) {
-      console.error("Database insert error:", dbError)
+      console.error("[Complete Profile] Database insert error:", dbError)
       return serverErrorResponse(`Failed to create profile: ${dbError.message}`)
     }
+
+    console.log("[Complete Profile] User created successfully:", { id: newUser.id, username: newUser.username, phone: newUser.phone_number })
 
     // Clear pending OAuth cookies
     cookieStore.delete("pending_oauth_email")

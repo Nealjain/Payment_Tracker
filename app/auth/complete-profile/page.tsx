@@ -196,14 +196,22 @@ export default function CompleteProfilePage() {
 
     setIsLoading(true)
     try {
+      const payload = {
+        username: username.trim(),
+        phoneNumber: rawPhone, // Send raw phone number without formatting
+        pin,
+      }
+      
+      console.log("[Complete Profile] Submitting:", { 
+        username: payload.username, 
+        phoneNumber: payload.phoneNumber,
+        pinLength: payload.pin.length 
+      })
+
       const response = await fetch("/api/auth/complete-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: username.trim(),
-          phoneNumber: rawPhone, // Send raw phone number without formatting
-          pin,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const result = await response.json()
