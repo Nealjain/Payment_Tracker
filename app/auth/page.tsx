@@ -20,6 +20,7 @@ const PIN_LENGTH = 4
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("signin")
   const [step, setStep] = useState<"email" | "details">("email")
+  const [signupStep, setSignupStep] = useState<"email" | "password" | "phone" | "pin" | "username">("email")
   const [loginMethod, setLoginMethod] = useState<"password" | "pin">("password")
   
   // Form fields
@@ -293,6 +294,7 @@ export default function AuthPage() {
 
   const resetForm = () => {
     setStep("email")
+    setSignupStep("email")
     setEmail("")
     setIdentifier("")
     setPassword("")
@@ -301,6 +303,82 @@ export default function AuthPage() {
     setPhoneNumber("")
     setPin("")
     setConfirmPin("")
+  }
+
+  const handleSignupNext = () => {
+    if (signupStep === "email") {
+      if (!email.trim()) {
+        toast({
+          title: "Email required",
+          description: "Please enter your email address",
+          variant: "destructive",
+        })
+        return
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email.trim())) {
+        toast({
+          title: "Invalid email",
+          description: "Please enter a valid email address",
+          variant: "destructive",
+        })
+        return
+      }
+      setSignupStep("password")
+    } else if (signupStep === "password") {
+      if (!password || password.length < 8) {
+        toast({
+          title: "Password too short",
+          description: "Password must be at least 8 characters",
+          variant: "destructive",
+        })
+        return
+      }
+      if (password !== confirmPassword) {
+        toast({
+          title: "Passwords don't match",
+          description: "Please make sure both passwords are the same",
+          variant: "destructive",
+        })
+        return
+      }
+      setSignupStep("phone")
+    } else if (signupStep === "phone") {
+      if (!phoneNumber || phoneNumber.length < 10) {
+        toast({
+          title: "Invalid phone number",
+          description: "Please enter a valid phone number",
+          variant: "destructive",
+        })
+        return
+      }
+      setSignupStep("pin")
+    } else if (signupStep === "pin") {
+      if (pin.length !== PIN_LENGTH) {
+        toast({
+          title: "Invalid PIN",
+          description: "PIN must be exactly 4 digits",
+          variant: "destructive",
+        })
+        return
+      }
+      if (pin !== confirmPin) {
+        toast({
+          title: "PINs don't match",
+          description: "Please make sure both PINs are the same",
+          variant: "destructive",
+        })
+        return
+      }
+      setSignupStep("username")
+    }
+  }
+
+  const handleSignupBack = () => {
+    if (signupStep === "password") setSignupStep("email")
+    else if (signupStep === "phone") setSignupStep("password")
+    else if (signupStep === "pin") setSignupStep("phone")
+    else if (signupStep === "username") setSignupStep("pin")
   }
 
   const canProceedEmail = activeTab === "signin" ? identifier.trim() && !isLoading : email.trim() && !isLoading
@@ -512,65 +590,127 @@ export default function AuthPage() {
             </TabsContent>
 
             <TabsContent value="signup" className="space-y-5 animate-fade-in">
-              {step === "email" ? (
+              {/* Progress indicator */}
+              <div className="flex items-center justify-between mb-4">
+                {["email", "password", "phone", "pin", "username"].map((s, i) => (
+                  <div key={s} className="flex items-center flex-1">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                        signupStep === s
+                          ? "bg-primary text-primary-foreground scale-110"
+                          : ["email", "password", "phone", "pin", "username"].indexOf(signupStep) > i
+                          ? "bg-primary/50 text-primary-foreground"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {i + 1}
+                    </div>
+                    {i < 4 && (
+                      <div
+                        className={`h-1 flex-1 mx-1 rounded transition-all ${
+                          ["email", "password", "phone", "pin", "username"].indexOf(signupStep) > i
+                            ? "bg-primary/50"
+                            : "bg-muted"
+                        }`}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {signupStep === "email" && (
                 <>
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-semibold">Step 1: Email Address</h3>
+                    <p className="text-sm text-muted-foreground">Enter your email to get started</p>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email Address</Label>
                     <Input
                       id="signup-email"
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder="your.email@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      onKeyPress={(e) => e.key === "Enter" && handleIdentifierCheck()}
+                      onKeyPress={(e) => e.key === "Enter" && handleSignupNext()}
                       disabled={isLoading}
                       autoFocus
                       className="transition-all duration-200 focus:scale-[1.02]"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      We'll check if this email is available
-                    </p>
                   </div>
-
                   <Button
-                    onClick={handleIdentifierCheck}
-                    className="w-full h-12 text-base font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                    disabled={!canProceedEmail}
+                    onClick={handleSignupNext}
+                    className="w-full h-12 text-base font-medium"
+                    disabled={!email.trim() || isLoading}
                   >
-                    {isLoading ? "Checking..." : "Continue"}
+                    Continue
                   </Button>
                 </>
-              ) : (
+              )}
+
+              {signupStep === "password" && (
                 <>
-                  <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">Creating account for:</Label>
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <span className="font-medium">{email}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleBack}
-                        className="h-8 text-xs"
-                      >
-                        Change
-                      </Button>
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-semibold">Step 2: Create Password</h3>
+                    <p className="text-sm text-muted-foreground">Choose a strong password</p>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Password</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="h-8 w-8 p-0"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Min 8 characters"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        autoFocus
+                        className="transition-all duration-200 focus:scale-[1.02]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Confirm Password</Label>
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Re-enter password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && handleSignupNext()}
+                        className="transition-all duration-200 focus:scale-[1.02]"
+                      />
+                      {password && confirmPassword && (
+                        <p className={`text-sm ${password === confirmPassword ? "text-green-500" : "text-red-500"}`}>
+                          {password === confirmPassword ? "✓ Passwords match" : "✗ Passwords don't match"}
+                        </p>
+                      )}
                     </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-username">Username</Label>
-                    <Input
-                      id="signup-username"
-                      placeholder="Choose a username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      disabled={isLoading}
-                      autoFocus
-                      className="transition-all duration-200 focus:scale-[1.02]"
-                    />
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleSignupBack} className="flex-1">
+                      Back
+                    </Button>
+                    <Button onClick={handleSignupNext} className="flex-1" disabled={!password || !confirmPassword}>
+                      Continue
+                    </Button>
                   </div>
+                </>
+              )}
 
+              {signupStep === "phone" && (
+                <>
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-semibold">Step 3: Phone Number</h3>
+                    <p className="text-sm text-muted-foreground">We'll use this for account security</p>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-phone">Phone Number</Label>
                     <PhoneInput
@@ -585,133 +725,111 @@ export default function AuthPage() {
                       Select your country and enter your phone number
                     </p>
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>Create Password</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="h-8 w-8 p-0 hover:bg-muted/50 transition-colors"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Create a password (min 8 characters)"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading}
-                      className="transition-all duration-200 focus:scale-[1.02]"
-                    />
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleSignupBack} className="flex-1">
+                      Back
+                    </Button>
+                    <Button onClick={handleSignupNext} className="flex-1" disabled={!phoneNumber || phoneNumber.length < 10}>
+                      Continue
+                    </Button>
                   </div>
+                </>
+              )}
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>Confirm Password</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="h-8 w-8 p-0 hover:bg-muted/50 transition-colors"
-                      >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                    <Input
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm your password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      disabled={isLoading}
-                      className="transition-all duration-200 focus:scale-[1.02]"
-                    />
-                    {password && confirmPassword && (
-                      <p
-                        className={`text-sm transition-colors duration-200 ${
-                          password === confirmPassword ? "text-green-500" : "text-red-500"
-                        }`}
-                      >
-                        {password === confirmPassword ? "Passwords match" : "Passwords don't match"}
-                      </p>
-                    )}
+              {signupStep === "pin" && (
+                <>
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-semibold">Step 4: Create PIN</h3>
+                    <p className="text-sm text-muted-foreground">4-digit PIN for quick access</p>
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>Create 4-Digit PIN</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowPin(!showPin)}
-                        className="h-8 w-8 p-0 hover:bg-muted/50 transition-colors"
-                      >
-                        {showPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>4-Digit PIN</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowPin(!showPin)}
+                          className="h-8 w-8 p-0"
+                        >
+                          {showPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <Input
+                        type={showPin ? "text" : "password"}
+                        placeholder="Enter 4 digits"
+                        value={pin}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "").slice(0, PIN_LENGTH)
+                          setPin(value)
+                        }}
+                        maxLength={PIN_LENGTH}
+                        autoFocus
+                        className="text-center text-2xl tracking-widest"
+                      />
                     </div>
-                    <Input
-                      type={showPin ? "text" : "password"}
-                      placeholder="Create a 4-digit PIN"
-                      value={pin}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, PIN_LENGTH)
-                        setPin(value)
-                      }}
-                      maxLength={PIN_LENGTH}
-                      disabled={isLoading}
-                      className="text-center text-lg tracking-widest transition-all duration-200 focus:scale-[1.02]"
-                    />
-                    <p className="text-xs text-muted-foreground">For quick access to your account</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="space-y-2">
                       <Label>Confirm PIN</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowConfirmPin(!showConfirmPin)}
-                        className="h-8 w-8 p-0 hover:bg-muted/50 transition-colors"
-                      >
-                        {showConfirmPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
+                      <Input
+                        type={showPin ? "text" : "password"}
+                        placeholder="Re-enter PIN"
+                        value={confirmPin}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "").slice(0, PIN_LENGTH)
+                          setConfirmPin(value)
+                        }}
+                        maxLength={PIN_LENGTH}
+                        onKeyPress={(e) => e.key === "Enter" && handleSignupNext()}
+                        className="text-center text-2xl tracking-widest"
+                      />
+                      {pin && confirmPin && (
+                        <p className={`text-sm text-center ${pin === confirmPin ? "text-green-500" : "text-red-500"}`}>
+                          {pin === confirmPin ? "✓ PINs match" : "✗ PINs don't match"}
+                        </p>
+                      )}
                     </div>
-                    <Input
-                      type={showConfirmPin ? "text" : "password"}
-                      placeholder="Confirm your 4-digit PIN"
-                      value={confirmPin}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, PIN_LENGTH)
-                        setConfirmPin(value)
-                      }}
-                      maxLength={PIN_LENGTH}
-                      disabled={isLoading}
-                      className="text-center text-lg tracking-widest transition-all duration-200 focus:scale-[1.02]"
-                    />
-                    {pin && confirmPin && (
-                      <p
-                        className={`text-sm transition-colors duration-200 ${
-                          pin === confirmPin ? "text-green-500" : "text-red-500"
-                        }`}
-                      >
-                        {pin === confirmPin ? "PINs match" : "PINs don't match"}
-                      </p>
-                    )}
                   </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleSignupBack} className="flex-1">
+                      Back
+                    </Button>
+                    <Button onClick={handleSignupNext} className="flex-1" disabled={pin.length !== PIN_LENGTH || confirmPin.length !== PIN_LENGTH}>
+                      Continue
+                    </Button>
+                  </div>
+                </>
+              )}
 
-                  <Button
-                    onClick={handleSignUp}
-                    className="w-full h-12 text-base font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                    disabled={!canSignUp}
-                  >
-                    {isLoading ? "Creating account..." : "Create Account"}
-                  </Button>
+              {signupStep === "username" && (
+                <>
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-semibold">Step 5: Choose Username</h3>
+                    <p className="text-sm text-muted-foreground">Pick a unique username</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-username">Username</Label>
+                    <Input
+                      id="signup-username"
+                      placeholder="Choose a username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && canSignUp && handleSignUp()}
+                      autoFocus
+                      className="transition-all duration-200 focus:scale-[1.02]"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Letters, numbers, and underscores only
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleSignupBack} className="flex-1">
+                      Back
+                    </Button>
+                    <Button onClick={handleSignUp} className="flex-1" disabled={!canSignUp}>
+                      {isLoading ? "Creating account..." : "Create Account"}
+                    </Button>
+                  </div>
                 </>
               )}
             </TabsContent>
