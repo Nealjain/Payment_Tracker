@@ -52,6 +52,7 @@ export async function getSession(): Promise<string | null> {
     const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
 
     if (!sessionToken) {
+      console.log("⚠️ No session cookie found")
       return null
     }
 
@@ -59,12 +60,15 @@ export async function getSession(): Promise<string | null> {
     const sessionData = jwt.verify(sessionToken, JWT_SECRET) as SessionData
 
     if (Date.now() > sessionData.expiresAt) {
+      console.log("⚠️ Session expired")
       await clearSession()
       return null
     }
 
+    console.log("✅ Valid session found for user:", sessionData.userId)
     return sessionData.userId
   } catch (error) {
+    console.log("❌ Session verification failed:", error)
     await clearSession()
     return null
   }

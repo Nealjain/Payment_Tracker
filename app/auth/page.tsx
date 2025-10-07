@@ -141,6 +141,12 @@ export default function AuthPage() {
       console.log("📥 Signin response:", { success: result.success, error: result.error })
 
       if (result.success) {
+        // Store user ID in localStorage as backup
+        if (result.data?.userId) {
+          localStorage.setItem("userId", result.data.userId)
+          console.log("💾 Stored userId in localStorage")
+        }
+        
         toast({ title: "Welcome back!", description: "Successfully signed in" })
         console.log("🚀 Redirecting to dashboard...")
         // Longer delay to ensure cookie is set
