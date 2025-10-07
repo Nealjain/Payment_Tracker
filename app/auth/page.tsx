@@ -95,6 +95,21 @@ export default function AuthPage() {
 
   // Sign in handler
   const handleSignIn = async () => {
+    if (!email.trim()) {
+      toast({ title: "Error", description: "Email is required", variant: "destructive" })
+      return
+    }
+
+    if (loginMethod === "password" && !password) {
+      toast({ title: "Error", description: "Password is required", variant: "destructive" })
+      return
+    }
+
+    if (loginMethod === "pin" && pin.length !== PIN_LENGTH) {
+      toast({ title: "Error", description: "PIN must be 4 digits", variant: "destructive" })
+      return
+    }
+
     setIsLoading(true)
     try {
       const response = await fetch("/api/auth/signin", {
