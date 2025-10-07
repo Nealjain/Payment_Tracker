@@ -1,36 +1,34 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { successResponse, errorResponse, serverErrorResponse } from "@/lib/api-response"
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json()
+    const body = await request.json()
+    const { email } = body
 
     if (!email) {
-      return NextResponse.json({ success: false, error: "Email is required" }, { status: 400 })
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return NextResponse.json({ success: false, error: "Invalid email format" }, { status: 400 })
+      return errorResponse("Email is required", 400)
     }
 
     const supabase = await createClient()
 
-    // Check if email exists in users table
-    const { data, error } = await supabase.from("users").select("id").eq("email", email).single()
+    // Check if user exists with this email
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .single()
 
     if (error && error.code !== "PGRST116") {
-      // PGRST116 means no rows returned (email doesn't exist)
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+      // PGRST116 means no rows returned (user doesn't exist)
+      console.error("Check email error:", error)
+      return serverErrorResponse("Failed to check email")
     }
 
-    return NextResponse.json({
-      success: true,
-      exists: !!data, // true if email exists, false if not
-    })
+    return successResponse({ exists: !!user })
   } catch (error) {
     console.error("Check email error:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    return serverErrorResponse("Internal server error")
   }
 }
