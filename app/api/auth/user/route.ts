@@ -5,7 +5,13 @@ import { successResponse, unauthorizedResponse, serverErrorResponse } from "@/li
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getSession()
+    let userId = await getSession()
+    
+    // Fallback: Check X-User-Id header (temporary workaround)
+    if (!userId) {
+      userId = request.headers.get("X-User-Id")
+      console.log("⚠️ Using userId from header for user fetch:", userId)
+    }
     
     if (!userId) {
       return unauthorizedResponse("Not authenticated")
