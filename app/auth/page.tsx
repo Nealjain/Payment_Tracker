@@ -65,14 +65,23 @@ export default function AuthPage() {
       })
 
       const result = await response.json()
+      console.log("📧 Email check result:", result)
 
-      if (result.exists) {
-        // Email exists - show sign in
-        setFlowType("signin")
+      if (result.success) {
+        const exists = result.data?.exists || false
+        if (exists) {
+          // Email exists - show sign in
+          console.log("✅ Email exists - showing signin form")
+          setFlowType("signin")
+        } else {
+          // New email - show sign up
+          console.log("ℹ️ New email - showing signup form")
+          setFlowType("signup")
+          setSignupStep("password")
+        }
       } else {
-        // New email - show sign up
-        setFlowType("signup")
-        setSignupStep("password")
+        console.error("❌ Email check failed:", result.error)
+        toast({ title: "Error", description: result.error || "Failed to check email", variant: "destructive" })
       }
     } catch (error) {
       toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" })
