@@ -7,6 +7,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { email } = body
 
+    console.log("📧 Checking email:", email)
+
     if (!email) {
       return errorResponse("Email is required", 400)
     }
@@ -22,13 +24,16 @@ export async function POST(request: NextRequest) {
 
     if (error && error.code !== "PGRST116") {
       // PGRST116 means no rows returned (user doesn't exist)
-      console.error("Check email error:", error)
+      console.error("❌ Check email error:", error)
       return serverErrorResponse("Failed to check email")
     }
 
-    return successResponse({ exists: !!user })
+    const exists = !!user
+    console.log(exists ? "✅ User exists" : "ℹ️ New user - show signup")
+
+    return successResponse({ exists })
   } catch (error) {
-    console.error("Check email error:", error)
+    console.error("❌ Check email error:", error)
     return serverErrorResponse("Internal server error")
   }
 }
