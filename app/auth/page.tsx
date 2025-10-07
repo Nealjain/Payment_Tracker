@@ -116,10 +116,9 @@ export default function AuthPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          identifier: email.trim(),
+          email: email.trim(),
           password: loginMethod === "password" ? password : undefined,
           pin: loginMethod === "pin" ? pin : undefined,
-          loginMethod,
         }),
       })
 
