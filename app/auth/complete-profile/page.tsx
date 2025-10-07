@@ -30,40 +30,57 @@ export default function CompleteProfilePage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    // Get user info from session
-    fetch("/api/auth/user")
+    // Check for pending OAuth data first
+    fetch("/api/auth/pending-oauth")
       .then((res) => res.json())
       .then((data) => {
-        if (data.user) {
-          setUserEmail(data.user.email)
-          
-          // Check what data already exists
-          const hasUsername = !!data.user.username && 
-            !data.user.username.startsWith("temp_") && 
-            data.user.username !== data.user.email?.split("@")[0]
-          const hasPhone = !!data.user.phone_number
-          const hasPin = data.user.pin_hash && data.user.pin_hash !== "temp"
-          
+        if (data.success && data.email) {
+          // New OAuth user - needs to complete profile
+          setUserEmail(data.email)
+          // Suggest username from email
+          setUsername(data.email.split("@")[0])
           setExistingData({
-            hasUsername,
-            hasPhone,
-            hasPin,
+            hasUsername: false,
+            hasPhone: false,
+            hasPin: false,
           })
-          
-          // Pre-fill existing data or suggest from email
-          if (hasUsername) {
-            setUsername(data.user.username)
-          } else if (data.user.email) {
-            // Suggest username from email
-            setUsername(data.user.email.split("@")[0])
-          }
-          
-          if (hasPhone) {
-            setPhoneNumber(data.user.phone_number)
-          }
         } else {
-          // No session, redirect to auth
-          router.push("/auth")
+          // Check if existing user with incomplete profile
+          return fetch("/api/auth/user")
+            .then((res) => res.json())
+            .then((userData) => {
+              if (userData.success && userData.data?.user) {
+                const user = userData.data.user
+                setUserEmail(user.email)
+                
+                // Check what data already exists
+                const hasUsername = !!user.username && 
+                  !user.username.startsWith("temp_") && 
+                  user.username !== user.email?.split("@")[0]
+                const hasPhone = !!user.phone_number
+                const hasPin = user.hasPin
+                
+                setExistingData({
+                  hasUsername,
+                  hasPhone,
+                  hasPin,
+                })
+                
+                // Pre-fill existing data or suggest from email
+                if (hasUsername) {
+                  setUsername(user.username)
+                } else if (user.email) {
+                  setUsername(user.email.split("@")[0])
+                }
+                
+                if (hasPhone) {
+                  setPhoneNumber(user.phone_number)
+                }
+              } else {
+                // No session or pending OAuth, redirect to auth
+                router.push("/auth")
+              }
+            })
         }
       })
       .catch(() => {

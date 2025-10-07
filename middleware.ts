@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { cookies } from "next/headers"
 
 const publicRoutes = ["/auth", "/auth/callback"]
 const profileRoutes = ["/auth/complete-profile"]
@@ -13,12 +14,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Check for pending OAuth (new users completing profile)
+  const cookieStore = await cookies()
+  const hasPendingOAuth = cookieStore.get("pending_oauth_email")?.value
+
+  // If on profile completion page and has pending OAuth, allow access
+  if (profileRoutes.some(route => pathname.startsWith(route)) && hasPendingOAuth) {
+    return NextResponse.next()
+  }
+
   // Check if user is authenticated
   const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()
 
   if (!session) {
-    // Not authenticated - redirect to auth
+    // Not authenticated and no pending OAuth - redirect to auth
     const url = new URL("/auth", request.url)
     url.searchParams.set("redirect", pathname)
     return NextResponse.redirect(url)
