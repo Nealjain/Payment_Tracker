@@ -113,16 +113,18 @@ export async function POST(request: NextRequest) {
       .insert({
         name,
         description: description || null,
-        currency: currency || "USD",
         created_by: userId,
       })
       .select()
       .single()
 
     if (groupError) {
-      console.error("Error creating group:", groupError)
-      return serverErrorResponse("Failed to create group")
+      console.error("❌ Error creating group:", groupError)
+      console.error("❌ Group error details:", JSON.stringify(groupError, null, 2))
+      return serverErrorResponse(`Failed to create group: ${groupError.message}`)
     }
+    
+    console.log("✅ Group created:", group.id)
 
     // Add creator as admin member
     const { error: memberError } = await supabase
@@ -134,11 +136,14 @@ export async function POST(request: NextRequest) {
       })
 
     if (memberError) {
-      console.error("Error adding member:", memberError)
+      console.error("❌ Error adding member:", memberError)
+      console.error("❌ Member error details:", JSON.stringify(memberError, null, 2))
       // Rollback: delete the group
       await supabase.from("groups").delete().eq("id", group.id)
-      return serverErrorResponse("Failed to create group")
+      return serverErrorResponse(`Failed to add member: ${memberError.message}`)
     }
+    
+    console.log("✅ Member added to group")
 
     return successResponse({ group }, 201)
   } catch (error) {
