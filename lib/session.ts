@@ -11,6 +11,8 @@ export interface SessionData {
 const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 const SESSION_COOKIE_NAME = "expense_tracker_session"
 const JWT_SECRET = process.env.SESSION_SECRET || "your-secret-key-change-in-production"
+export const SESSION_COOKIE = SESSION_COOKIE_NAME
+export const SESSION_MAX_AGE = SESSION_DURATION / 1000
 
 export async function createSession(
   userId: string,

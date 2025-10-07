@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { createSession } from "@/lib/session"
+import { createSession, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/session"
 import { hashPin } from "@/lib/auth"
 import { signupSchema } from "@/lib/schemas/auth"
 import { successResponse, errorResponse, validationErrorResponse, rateLimitResponse, serverErrorResponse } from "@/lib/api-response"
@@ -84,10 +84,18 @@ export async function POST(request: NextRequest) {
       return serverErrorResponse(`Account created but profile setup failed: ${dbError.message}`)
     }
 
-    // Create session
-    await createSession(authData.user.id)
+    // Create session token and attach cookie to response
+    const token = await createSession(authData.user.id, { setCookie: false })
+    const res = successResponse({ userId: authData.user.id }, 201)
+    res.cookies.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: SESSION_MAX_AGE,
+      path: "/",
+    })
 
-    return successResponse({ userId: authData.user.id }, 201)
+    return res
   } catch (error) {
     console.error("Signup error:", error)
     return serverErrorResponse("Internal server error")

@@ -122,6 +122,14 @@ export default function AuthPage() {
       return
     }
 
+    // Clear any existing session cookies before login
+    document.cookie.split(";").forEach((c) => {
+      document.cookie = c
+        .replace(/^ +/, "")
+        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/")
+    })
+    console.log("🧹 Cleared existing cookies")
+
     setIsLoading(true)
     try {
       const payload = {

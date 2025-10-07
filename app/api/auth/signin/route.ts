@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { createSession } from "@/lib/session"
+import { createSession, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/session"
 import { verifyPin } from "@/lib/auth"
 import { successResponse, errorResponse, validationErrorResponse, unauthorizedResponse, serverErrorResponse } from "@/lib/api-response"
 import { signinSchema } from "@/lib/schemas/auth"
@@ -46,8 +46,17 @@ export async function POST(request: NextRequest) {
         return unauthorizedResponse("Invalid password")
       }
 
-      await createSession(user.id)
-      return successResponse({ userId: user.id })
+      // Create token but don't set cookie via helper (we'll attach it to response)
+      const token = await createSession(user.id, { setCookie: false })
+      const res = successResponse({ userId: user.id })
+      res.cookies.set(SESSION_COOKIE, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: SESSION_MAX_AGE,
+        path: "/",
+      })
+      return res
     }
 
     // If PIN provided, verify locally
@@ -57,8 +66,16 @@ export async function POST(request: NextRequest) {
         return unauthorizedResponse("Invalid PIN")
       }
 
-      await createSession(user.id)
-      return successResponse({ userId: user.id })
+      const token = await createSession(user.id, { setCookie: false })
+      const res = successResponse({ userId: user.id })
+      res.cookies.set(SESSION_COOKIE, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: SESSION_MAX_AGE,
+        path: "/",
+      })
+      return res
     }
 
     return unauthorizedResponse("No credentials provided")
