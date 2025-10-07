@@ -38,7 +38,9 @@ export default function CompleteProfilePage() {
           setUserEmail(data.user.email)
           
           // Check what data already exists
-          const hasUsername = !!data.user.username && data.user.username !== data.user.email?.split("@")[0]
+          const hasUsername = !!data.user.username && 
+            !data.user.username.startsWith("temp_") && 
+            data.user.username !== data.user.email?.split("@")[0]
           const hasPhone = !!data.user.phone_number
           const hasPin = data.user.pin_hash && data.user.pin_hash !== "temp"
           
@@ -48,10 +50,11 @@ export default function CompleteProfilePage() {
             hasPin,
           })
           
-          // Pre-fill existing data
+          // Pre-fill existing data or suggest from email
           if (hasUsername) {
             setUsername(data.user.username)
           } else if (data.user.email) {
+            // Suggest username from email
             setUsername(data.user.email.split("@")[0])
           }
           

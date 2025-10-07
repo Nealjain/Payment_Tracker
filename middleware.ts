@@ -33,6 +33,7 @@ export async function middleware(request: NextRequest) {
 
   const isProfileComplete = user && 
     user.username && 
+    !user.username.startsWith("temp_") &&
     user.phone_number && 
     user.pin_hash && 
     user.pin_hash !== "temp"

@@ -27,11 +27,12 @@ export async function GET(request: NextRequest) {
 
       if (!existingUser) {
         // New user - create minimal record and redirect to complete profile
+        // DO NOT set username/phone/pin - force user to complete profile
         const { data: newUser, error: createError } = await supabase
           .from("users")
           .insert({
             email: session.user.email,
-            username: session.user.email?.split("@")[0] || `user_${Date.now()}`,
+            username: `temp_${Date.now()}`, // Temporary username
             pin_hash: "temp", // Temporary, will be updated in complete profile
             provider: "google",
           })
@@ -91,7 +92,9 @@ export async function GET(request: NextRequest) {
         })
 
         // Check if profile is complete
-        const isProfileComplete = existingUser.username && 
+        const isProfileComplete = 
+          existingUser.username && 
+          !existingUser.username.startsWith("temp_") &&
           existingUser.phone_number && 
           existingUser.pin_hash && 
           existingUser.pin_hash !== "temp"
