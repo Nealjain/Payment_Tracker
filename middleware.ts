@@ -10,8 +10,11 @@ const JWT_SECRET = process.env.SESSION_SECRET || "your-secret-key-change-in-prod
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  console.log("🛡️ Middleware checking:", pathname)
+
   // Allow public routes
   if (publicRoutes.some(route => pathname.startsWith(route))) {
+    console.log("✅ Public route, allowing")
     return NextResponse.next()
   }
 
@@ -22,6 +25,7 @@ export async function middleware(request: NextRequest) {
 
     if (!sessionToken) {
       // Not authenticated - redirect to auth
+      console.log("❌ No session token, redirecting to auth")
       const url = new URL("/auth", request.url)
       url.searchParams.set("redirect", pathname)
       return NextResponse.redirect(url)
@@ -29,11 +33,13 @@ export async function middleware(request: NextRequest) {
 
     // Verify JWT token
     jwt.verify(sessionToken, JWT_SECRET)
+    console.log("✅ Valid session, allowing access to:", pathname)
     
     // Valid session - allow request
     return NextResponse.next()
   } catch (error) {
     // Invalid session - redirect to auth
+    console.log("❌ Invalid session, redirecting to auth")
     const url = new URL("/auth", request.url)
     url.searchParams.set("redirect", pathname)
     return NextResponse.redirect(url)

@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
         return unauthorizedResponse("Invalid PIN")
       }
       console.log("✅ PIN verification successful")
-      await createSession(user.id)
+      const sessionToken = await createSession(user.id)
+      console.log("🍪 Session created, cookie should be set")
       return successResponse({ userId: user.id })
     }
 

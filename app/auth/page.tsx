@@ -43,6 +43,11 @@ export default function AuthPage() {
   const router = useRouter()
   const { toast } = useToast()
 
+  // Debug: Log flowType changes
+  useEffect(() => {
+    console.log("🎯 Current flowType:", flowType)
+  }, [flowType])
+
   // Check if email exists and route to signin or signup
   const handleEmailCheck = async () => {
     if (!email.trim()) {
@@ -73,11 +78,13 @@ export default function AuthPage() {
           // Email exists - show sign in
           console.log("✅ Email exists - showing signin form")
           setFlowType("signin")
+          console.log("🔄 Flow type set to:", "signin")
         } else {
           // New email - show sign up
           console.log("ℹ️ New email - showing signup form")
           setFlowType("signup")
           setSignupStep("password")
+          console.log("🔄 Flow type set to:", "signup")
         }
       } else {
         console.error("❌ Email check failed:", result.error)
@@ -139,7 +146,11 @@ export default function AuthPage() {
 
       if (result.success) {
         toast({ title: "Welcome back!", description: "Successfully signed in" })
-        router.push("/dashboard")
+        console.log("🚀 Redirecting to dashboard...")
+        // Small delay to ensure cookie is set
+        setTimeout(() => {
+          router.push("/dashboard")
+        }, 100)
       } else {
         toast({ title: "Sign in failed", description: result.error || "Invalid credentials", variant: "destructive" })
         setPassword("")
