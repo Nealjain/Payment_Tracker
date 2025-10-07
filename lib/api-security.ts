@@ -50,15 +50,18 @@ export async function withAuth(
   request: NextRequest,
   handler: (request: NextRequest, userId: string) => Promise<NextResponse>,
 ) {
+  console.log("🔐 withAuth: Validating session...")
   const sessionResult = await validateSession()
 
   if (!sessionResult.valid) {
+    console.log("❌ withAuth: Session invalid:", sessionResult.error)
     return NextResponse.json(
       { success: false, error: sessionResult.error || "Authentication required" },
       { status: 401 },
     )
   }
 
+  console.log("✅ withAuth: Session valid for user:", sessionResult.userId)
   return handler(request, sessionResult.userId!)
 }
 
