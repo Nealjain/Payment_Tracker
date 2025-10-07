@@ -39,9 +39,11 @@ export default function PaymentsPage() {
       const result = await response.json()
 
       console.log("📊 Fetch payments response:", result)
+      console.log("📊 Payments data:", result.data?.payments)
 
       if (result.success) {
-        setPayments(result.payments || [])
+        // API returns { success: true, data: { payments: [...] } }
+        setPayments(result.data?.payments || [])
       } else {
         console.error("❌ Failed to load payments:", result.error)
         toast({

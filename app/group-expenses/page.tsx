@@ -49,9 +49,11 @@ export default function GroupExpensesPage() {
       const result = await response.json()
 
       console.log("👥 Fetch groups response:", result)
+      console.log("👥 Groups data:", result.data?.groups)
 
       if (result.success) {
-        setGroups(result.groups || [])
+        // API returns { success: true, data: { groups: [...] } }
+        setGroups(result.data?.groups || [])
       } else {
         console.error("❌ Failed to load groups:", result.error)
         toast({
