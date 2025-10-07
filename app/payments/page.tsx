@@ -32,7 +32,7 @@ export default function PaymentsPage() {
       const result = await response.json()
 
       if (result.success) {
-        setPayments(result.payments)
+        setPayments(result.payments || [])
       } else {
         toast({
           title: "Error",

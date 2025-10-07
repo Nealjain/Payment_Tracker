@@ -52,7 +52,7 @@ export function PaymentList({ payments, onEdit, onDelete, isLoading = false }: P
     })
   }
 
-  if (payments.length === 0) {
+  if (!payments || payments.length === 0) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
