@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server"
 import { cookies } from "next/headers"
 import jwt from "jsonwebtoken"
 
-const publicRoutes = ["/auth"]
+const publicRoutes = ["/auth", "/dashboard", "/payments", "/settings", "/categories", "/upi", "/reports", "/notifications", "/group-expenses", "/onboarding"]
 const SESSION_COOKIE_NAME = "expense_tracker_session"
 const JWT_SECRET = process.env.SESSION_SECRET || "your-secret-key-change-in-production"
 
