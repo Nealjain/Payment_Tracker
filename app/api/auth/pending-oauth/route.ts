@@ -7,11 +7,13 @@ export async function GET(request: NextRequest) {
     const cookieStore = await cookies()
     const pendingEmail = cookieStore.get("pending_oauth_email")?.value
     const pendingProvider = cookieStore.get("pending_oauth_provider")?.value
+    const pendingUserId = cookieStore.get("pending_oauth_user_id")?.value
 
-    if (pendingEmail && pendingProvider) {
+    if (pendingEmail && pendingProvider && pendingUserId) {
       return successResponse({
         email: pendingEmail,
         provider: pendingProvider,
+        userId: pendingUserId,
       })
     }
 

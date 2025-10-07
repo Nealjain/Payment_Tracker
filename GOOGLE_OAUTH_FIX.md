@@ -9,16 +9,39 @@ When signing in with Google OAuth, the complete-profile page was not showing up 
 
 ## Solution
 
-### 1. Created `/api/auth/pending-oauth` Endpoint
+### 1. Sign Out Immediately After OAuth
+**File:** `app/auth/callback/route.ts`
+
+For new users, after Google OAuth completes:
+1. Exchange code for session (required by Supabase)
+2. Check if user exists in our database
+3. If new user: Store OAuth data in cookies and **immediately sign out**
+4. Redirect to complete-profile page WITHOUT authentication
+
+This prevents the Supabase Auth session from being cached until profile is complete.
+
+### 2. Created `/api/auth/pending-oauth` Endpoint
 **File:** `app/api/auth/pending-oauth/route.ts`
 
 This endpoint checks for pending OAuth data stored in cookies:
 - `pending_oauth_email` - Email from Google OAuth
 - `pending_oauth_provider` - Provider name (google)
+- `pending_oauth_user_id` - Supabase Auth user ID
 
-Returns the email if pending OAuth exists, allowing the complete-profile page to load.
+Returns the data if pending OAuth exists, allowing the complete-profile page to load.
 
-### 2. Updated Complete Profile Page
+### 3. Updated Complete Profile API
+**File:** `app/api/auth/complete-profile/route.ts`
+
+When profile is submitted:
+1. Validate all fields with Zod
+2. Check for pending OAuth data in cookies
+3. Create user record in database with stored user ID
+4. Clear pending OAuth cookies
+5. Create session (now user is authenticated)
+6. Return success
+
+### 4. Updated Complete Profile Page
 **File:** `app/auth/complete-profile/page.tsx`
 
 Changed the logic to:
@@ -27,7 +50,7 @@ Changed the logic to:
 3. Pre-fill username suggestion from email
 4. Show appropriate UI for new vs existing users
 
-### 3. Updated Middleware
+### 5. Updated Middleware
 **File:** `middleware.ts`
 
 Added logic to allow access to `/auth/complete-profile` for users with pending OAuth cookies, even without a session.
@@ -40,21 +63,27 @@ Added logic to allow access to `/auth/complete-profile` for users with pending O
    ↓
 2. Google authentication completes
    ↓
-3. Callback route checks if user exists
+3. Callback exchanges code for session
    ↓
-4. User doesn't exist → Store email in cookies
+4. Checks if user exists in database
    ↓
-5. Redirect to /auth/complete-profile
+5. User doesn't exist → Store email/userId in cookies
    ↓
-6. Page loads, fetches pending OAuth data
+6. IMMEDIATELY SIGN OUT from Supabase Auth
    ↓
-7. Shows form with email pre-filled
+7. Redirect to /auth/complete-profile (NO SESSION)
    ↓
-8. User fills username, phone, PIN
+8. Page loads, fetches pending OAuth data
    ↓
-9. Submit → Creates user account
+9. Shows form with email pre-filled
    ↓
-10. Redirect to dashboard
+10. User fills username, phone, PIN
+   ↓
+11. Submit → Creates user account in database
+   ↓
+12. Creates session (NOW authenticated)
+   ↓
+13. Redirect to dashboard
 ```
 
 ### Existing User with Incomplete Profile
@@ -130,7 +159,8 @@ GOOGLE_OAUTH_FIX.md            # NEW: This documentation
   "success": true,
   "data": {
     "email": "user@example.com",
-    "provider": "google"
+    "provider": "google",
+    "userId": "uuid-from-supabase-auth"
   }
 }
 ```
@@ -168,22 +198,29 @@ GOOGLE_OAUTH_FIX.md            # NEW: This documentation
 
 ## Security Notes
 
-1. **Pending OAuth cookies expire in 10 minutes**
+1. **User is signed out immediately after OAuth**
+   - No Supabase Auth session until profile is complete
+   - Prevents cached authentication without profile data
+   - User must complete profile to gain access
+
+2. **Pending OAuth cookies expire in 10 minutes**
    - Forces users to complete profile quickly
    - Prevents stale OAuth sessions
 
-2. **No user account created until profile is complete**
+3. **No user account created until profile is complete**
    - Prevents incomplete records in database
    - Ensures data integrity
+   - User ID is stored but no database record exists
 
-3. **All inputs validated with Zod**
+4. **All inputs validated with Zod**
    - Username, phone, PIN validated
    - Checks for duplicates
    - Type-safe validation
 
-4. **Middleware protects routes**
+5. **Middleware protects routes**
    - Incomplete profiles can't access app
    - Pending OAuth users can only access complete-profile page
+   - No session = no access to protected routes
 
 ## Troubleshooting
 

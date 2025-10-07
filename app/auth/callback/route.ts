@@ -26,9 +26,8 @@ export async function GET(request: NextRequest) {
         .single()
 
       if (!existingUser) {
-        // New user - DO NOT create account yet
-        // Store email in a temporary session and redirect to complete profile
-        // The complete-profile page will create the actual user record
+        // New user - Store OAuth data and SIGN OUT from Supabase Auth
+        // User will only be authenticated after completing profile
         const cookieStore = await cookies()
         
         // Store pending OAuth data temporarily (expires in 10 minutes)
@@ -46,8 +45,39 @@ export async function GET(request: NextRequest) {
           maxAge: 60 * 10,
         })
 
-        // Redirect to complete profile WITHOUT creating user yet
-        return NextResponse.redirect(`${requestUrl.origin}/auth/complete-profile`)
+        cookieStore.set("pending_oauth_user_id", session.user.id, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 60 * 10,
+        })
+
+        // IMPORTANT: Sign out from Supabase Auth immediately
+        // User will be signed in again after completing profile
+        await supabase.auth.signOut()
+
+        // Redirect to complete profile WITHOUT authentication
+          const redirectUrl = new URL("/auth/complete-profile", requestUrl.origin)
+          const res = NextResponse.redirect(redirectUrl)
+
+          // Store pending OAuth data temporarily (expires in 10 minutes)
+          res.cookies.set("pending_oauth_email", session.user.email!, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 60 * 10, // 10 minutes to complete profile
+            path: "/",
+          })
+
+          res.cookies.set("pending_oauth_provider", "google", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 60 * 10,
+            path: "/",
+          })
+
+          return res
       } else {
         // User exists - update provider to include google if not already
         if (existingUser.provider !== "google") {
@@ -58,39 +88,50 @@ export async function GET(request: NextRequest) {
         }
 
         // Set session cookie
-        const cookieStore = await cookies()
-        cookieStore.set("session", existingUser.id, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          maxAge: 60 * 60 * 24 * 7,
-        })
+          // Set session cookie using JWT from createSession and attach it to redirect response
+          const sessionToken = await (await import("@/lib/session")).createSession(existingUser.id, { setCookie: false })
 
-        // Check if profile is complete
-        const isProfileComplete = 
-          existingUser.username && 
-          !existingUser.username.startsWith("temp_") &&
-          existingUser.phone_number && 
-          existingUser.pin_hash && 
-          existingUser.pin_hash !== "temp"
+          // Build redirect response and attach session cookie so client receives it on redirect
+          // Default redirect is dashboard; may change below if profile incomplete or onboarding needed
+          let destination = 
+            `${requestUrl.origin}/dashboard`
 
-        if (!isProfileComplete) {
-          // Incomplete profile - redirect to complete it
-          return NextResponse.redirect(`${requestUrl.origin}/auth/complete-profile`)
-        }
+          // Check if profile is complete
+          const isProfileComplete = 
+            existingUser.username && 
+            !existingUser.username.startsWith("temp_") &&
+            existingUser.phone_number && 
+            existingUser.pin_hash && 
+            existingUser.pin_hash !== "temp"
 
-        // Profile is complete - check onboarding
-        const { data: preferences } = await supabase
-          .from("user_preferences")
-          .select("onboarding_completed")
-          .eq("user_id", existingUser.id)
-          .single()
+          if (!isProfileComplete) {
+            destination = `${requestUrl.origin}/auth/complete-profile`
+          } else {
+            // Profile is complete - check onboarding
+            const { data: preferences } = await supabase
+              .from("user_preferences")
+              .select("onboarding_completed")
+              .eq("user_id", existingUser.id)
+              .single()
 
-        if (!preferences?.onboarding_completed) {
-          return NextResponse.redirect(`${requestUrl.origin}/onboarding`)
-        }
+            if (!preferences?.onboarding_completed) {
+              destination = `${requestUrl.origin}/onboarding`
+            }
+          }
 
-        return NextResponse.redirect(`${requestUrl.origin}/dashboard`)
+          const redirectUrl = new URL(destination)
+          const res = NextResponse.redirect(redirectUrl)
+
+          // Attach session cookie
+          res.cookies.set("expense_tracker_session", sessionToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 60 * 60 * 24 * 7,
+            path: "/",
+          })
+
+          return res
       }
     }
   }

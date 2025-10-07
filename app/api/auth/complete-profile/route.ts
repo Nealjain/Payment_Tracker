@@ -22,8 +22,9 @@ export async function POST(request: NextRequest) {
     const cookieStore = await cookies()
     const pendingEmail = cookieStore.get("pending_oauth_email")?.value
     const pendingProvider = cookieStore.get("pending_oauth_provider")?.value
+    const pendingUserId = cookieStore.get("pending_oauth_user_id")?.value
 
-    if (!pendingEmail || !pendingProvider) {
+    if (!pendingEmail || !pendingProvider || !pendingUserId) {
       return unauthorizedResponse("No pending OAuth session found. Please sign in again.")
     }
 
@@ -48,18 +49,11 @@ export async function POST(request: NextRequest) {
     // Hash the PIN
     const pinHash = await hashPin(pin)
 
-    // Get current auth user
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    
-    if (!authUser || authUser.email !== pendingEmail) {
-      return unauthorizedResponse("Authentication mismatch. Please sign in again.")
-    }
-
-    // Create user record in users table
+    // Create user record in users table using the stored user ID
     const { data: newUser, error: dbError } = await supabase
       .from("users")
       .insert({
-        id: authUser.id,
+        id: pendingUserId,
         email: pendingEmail,
         username,
         phone_number: phoneNumber,
@@ -77,6 +71,7 @@ export async function POST(request: NextRequest) {
     // Clear pending OAuth cookies
     cookieStore.delete("pending_oauth_email")
     cookieStore.delete("pending_oauth_provider")
+    cookieStore.delete("pending_oauth_user_id")
 
     // Create session
     await createSession(newUser.id)

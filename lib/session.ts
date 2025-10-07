@@ -12,7 +12,10 @@ const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 const SESSION_COOKIE_NAME = "expense_tracker_session"
 const JWT_SECRET = process.env.SESSION_SECRET || "your-secret-key-change-in-production"
 
-export async function createSession(userId: string): Promise<string> {
+export async function createSession(
+  userId: string,
+  options?: { setCookie?: boolean }
+): Promise<string> {
   const sessionData: SessionData = {
     userId,
     createdAt: Date.now(),
@@ -24,14 +27,18 @@ export async function createSession(userId: string): Promise<string> {
     expiresIn: "24h",
   })
 
-  const cookieStore = await cookies()
-  cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: SESSION_DURATION / 1000,
-    path: "/",
-  })
+  const setCookie = options?.setCookie ?? true
+
+  if (setCookie) {
+    const cookieStore = await cookies()
+    cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: SESSION_DURATION / 1000,
+      path: "/",
+    })
+  }
 
   return sessionToken
 }
