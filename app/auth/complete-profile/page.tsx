@@ -161,31 +161,41 @@ export default function CompleteProfilePage() {
   if (!existingData.hasPin) missingFields.push("Security PIN")
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative">
+    <div className="min-h-screen flex items-center justify-center p-4 relative bg-black/50 backdrop-blur-sm">
       <SharedBackground />
-      <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur-lg relative z-10">
-        <CardHeader className="text-center space-y-3">
-          <CardTitle className="text-2xl font-bold">Complete Your Profile</CardTitle>
+      
+      {/* Overlay to prevent clicking outside */}
+      <div className="fixed inset-0 bg-black/60 z-40" />
+      
+      <Card className="w-full max-w-md shadow-2xl border-2 border-primary/20 bg-card relative z-50 animate-in fade-in zoom-in duration-300">
+        <CardHeader className="text-center space-y-3 border-b pb-6">
+          <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+            <span className="text-3xl">🔒</span>
+          </div>
+          <CardTitle className="text-2xl font-bold">Profile Required</CardTitle>
           <CardDescription>
             {userEmail && (
               <span className="block mb-2">
                 Signed in as: <span className="font-medium text-primary">{userEmail}</span>
               </span>
             )}
-            {missingFields.length > 0 ? (
-              <div className="mt-3 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
-                <p className="text-sm font-medium text-yellow-600 dark:text-yellow-500 mb-1">
-                  📝 Please provide the following:
-                </p>
-                <ul className="text-xs text-yellow-600 dark:text-yellow-500 space-y-1">
-                  {missingFields.map((field) => (
-                    <li key={field}>• {field}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <p className="text-sm">Update your profile information</p>
-            )}
+            <div className="mt-3 p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+              <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">
+                ⚠️ You must complete your profile to use the app
+              </p>
+              {missingFields.length > 0 && (
+                <>
+                  <p className="text-xs text-red-600 dark:text-red-400 mb-1">
+                    Required information:
+                  </p>
+                  <ul className="text-xs text-red-600 dark:text-red-400 space-y-1">
+                    {missingFields.map((field) => (
+                      <li key={field}>• {field}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
