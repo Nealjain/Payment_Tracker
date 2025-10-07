@@ -38,7 +38,14 @@ export default function GroupExpensesPage() {
 
   const fetchGroups = async () => {
     try {
-      const response = await fetch("/api/groups")
+      // Get userId from localStorage as workaround
+      const userId = localStorage.getItem("userId")
+      
+      const response = await fetch("/api/groups", {
+        headers: {
+          "X-User-Id": userId || ""
+        }
+      })
       const result = await response.json()
 
       console.log("👥 Fetch groups response:", result)
