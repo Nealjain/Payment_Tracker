@@ -7,10 +7,56 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, RefreshCw } from "lucide-react"
 import SharedBackground from "@/components/ui/shared-background"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const PIN_LENGTH = 4
+
+// Format phone number as user types
+function formatPhoneNumber(value: string): string {
+  // Remove all non-digits
+  const digits = value.replace(/\D/g, "")
+  
+  // If starts with country code, format accordingly
+  if (digits.startsWith("1") && digits.length > 1) {
+    // US/Canada: +1 (XXX) XXX-XXXX
+    const match = digits.match(/^1(\d{0,3})(\d{0,3})(\d{0,4})/)
+    if (match) {
+      let formatted = "+1"
+      if (match[1]) formatted += ` (${match[1]}`
+      if (match[2]) formatted += `) ${match[2]}`
+      if (match[3]) formatted += `-${match[3]}`
+      return formatted
+    }
+  } else if (digits.startsWith("91") && digits.length > 2) {
+    // India: +91 XXXXX XXXXX
+    const match = digits.match(/^91(\d{0,5})(\d{0,5})/)
+    if (match) {
+      let formatted = "+91"
+      if (match[1]) formatted += ` ${match[1]}`
+      if (match[2]) formatted += ` ${match[2]}`
+      return formatted
+    }
+  }
+  
+  // Default: just add + if not present
+  return digits ? `+${digits}` : ""
+}
+
+// Get raw phone number (digits only with +)
+function getRawPhoneNumber(formatted: string): string {
+  return formatted.replace(/[^\d+]/g, "")
+}
 
 export default function CompleteProfilePage() {
   const [username, setUsername] = useState("")
@@ -21,6 +67,7 @@ export default function CompleteProfilePage() {
   const [showConfirmPin, setShowConfirmPin] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [userEmail, setUserEmail] = useState("")
+  const [showCacheClearDialog, setShowCacheClearDialog] = useState(false)
   const [existingData, setExistingData] = useState({
     hasUsername: false,
     hasPhone: false,
@@ -83,11 +130,9 @@ export default function CompleteProfilePage() {
                   setPhoneNumber(user.phone_number)
                 }
               } else {
-                // No session or pending OAuth, redirect to auth after a delay
-                console.log("No pending OAuth or session, redirecting to auth")
-                setTimeout(() => {
-                  if (mounted) router.push("/auth")
-                }, 1000)
+                // No session or pending OAuth - might be cache issue
+                console.log("No pending OAuth or session - possible cache issue")
+                setShowCacheClearDialog(true)
               }
             })
         }
@@ -95,10 +140,8 @@ export default function CompleteProfilePage() {
       .catch((error) => {
         console.error("Error loading profile data:", error)
         if (mounted) {
-          // Don't redirect immediately on error, give user a chance to see what happened
-          setTimeout(() => {
-            if (mounted) router.push("/auth")
-          }, 2000)
+          // Show cache clear dialog on error
+          setShowCacheClearDialog(true)
         }
       })
 
@@ -118,12 +161,15 @@ export default function CompleteProfilePage() {
       return
     }
 
+    // Get raw phone number (remove formatting)
+    const rawPhone = getRawPhoneNumber(phoneNumber)
+    
     // Validate phone number
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/
-    if (!phoneRegex.test(phoneNumber.trim())) {
+    const phoneRegex = /^\+?[1-9]\d{9,14}$/
+    if (!phoneRegex.test(rawPhone)) {
       toast({
         title: "Invalid phone number",
-        description: "Please enter a valid phone number (e.g., +1234567890)",
+        description: "Please enter a valid phone number with country code",
         variant: "destructive",
       })
       return
@@ -155,7 +201,7 @@ export default function CompleteProfilePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: username.trim(),
-          phoneNumber: phoneNumber.trim(),
+          phoneNumber: rawPhone, // Send raw phone number without formatting
           pin,
         }),
       })
@@ -261,13 +307,22 @@ export default function CompleteProfilePage() {
             <Input
               id="phone"
               type="tel"
-              placeholder="+1234567890"
+              placeholder="+1 (555) 123-4567 or +91 12345 67890"
               value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
+              onChange={(e) => {
+                const formatted = formatPhoneNumber(e.target.value)
+                setPhoneNumber(formatted)
+              }}
               disabled={isLoading || existingData.hasPhone}
-              className="transition-all duration-200 focus:scale-[1.02]"
+              className="transition-all duration-200 focus:scale-[1.02] font-mono"
             />
-            <p className="text-xs text-muted-foreground">Include country code (e.g., +1 for US, +91 for India)</p>
+            <p className="text-xs text-muted-foreground">
+              {phoneNumber && getRawPhoneNumber(phoneNumber).length >= 10 ? (
+                <span className="text-green-500">✓ Valid format</span>
+              ) : (
+                "Include country code (e.g., +1 for US, +91 for India)"
+              )}
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -351,6 +406,47 @@ export default function CompleteProfilePage() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Cache Clear Dialog */}
+      <AlertDialog open={showCacheClearDialog} onOpenChange={setShowCacheClearDialog}>
+        <AlertDialogContent className="z-[60]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-orange-500" />
+              Clear Browser Cache
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                We couldn't load your profile data. This might be due to cached authentication state.
+              </p>
+              <div className="bg-muted p-3 rounded-lg space-y-2 text-sm">
+                <p className="font-semibold">Please try these steps:</p>
+                <ol className="list-decimal list-inside space-y-1">
+                  <li>Clear your browser cache and cookies</li>
+                  <li>Close all browser tabs</li>
+                  <li>Reopen the browser</li>
+                  <li>Sign in with Google again</li>
+                </ol>
+              </div>
+              <div className="bg-blue-500/10 p-3 rounded-lg text-sm border border-blue-500/20">
+                <p className="font-semibold text-blue-600 dark:text-blue-400 mb-1">Quick Clear:</p>
+                <p className="text-muted-foreground">
+                  <strong>Mac:</strong> Cmd + Shift + Delete<br />
+                  <strong>Windows:</strong> Ctrl + Shift + Delete
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => router.push("/auth")}>
+              Go to Sign In
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => window.location.reload()}>
+              Reload Page
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
