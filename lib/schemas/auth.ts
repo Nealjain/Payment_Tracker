@@ -34,19 +34,6 @@ export const signinSchema = z.object({
 
 export type SigninInput = z.infer<typeof signinSchema>
 
-// Complete profile schema (for Google OAuth users)
-export const completeProfileSchema = z.object({
-  username: z
-    .string()
-    .min(3, "Username must be at least 3 characters")
-    .max(20, "Username must be at most 20 characters")
-    .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
-  phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
-  pin: z.string().length(4, "PIN must be exactly 4 digits").regex(/^\d{4}$/, "PIN must contain only digits"),
-})
-
-export type CompleteProfileInput = z.infer<typeof completeProfileSchema>
-
 // Update PIN schema
 export const updatePinSchema = z.object({
   currentPin: z.string().length(4, "PIN must be exactly 4 digits").regex(/^\d{4}$/, "PIN must contain only digits"),
